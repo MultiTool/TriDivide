@@ -6,11 +6,10 @@ using System.IO;
 
 /*
 to do:
+hanging connections 
+export tree fractal lines with real connected points. 
+mesh up all tree fractal lines for continuous surface. 
 even distribution on sphere 
-hanging connections
-each point (tri ctr) has a list of other connected tris. is there a direction? 
-
-mesh up all tree fractal lines with real connected points. 
 
 */
 
@@ -637,7 +636,11 @@ indexing is:
 
 TriDex = ( (YDex * (YDex-1)) / 2) + XDex;
 
-TriDex = ( ( ( (YDex+1) * (YDex)) / 2) - 0) + XDex; *** looks good 
+If even number of dimensions
+TriDex = ( ((YDex+1) * YDex) / 2) + XDex; *** looks good 
+
+If odd number of dimensions
+TriDex = (YDex * YDex) + XDex;
 
 ( (0 * (0 - 1)) / 2) = 0 
 ( (1 * (1 - 1)) / 2) = 0 
