@@ -15,88 +15,88 @@ mesh up all tree fractal lines with real connected points.
 */
 
 namespace TriDivide {
-	class TriDivide {
-		// Recursive triangle division by 2, for hypercube
-		double Radius = 1.0;
-		// const int NumVDims = 8;// Virtual dimensions
-		const int NumVDims = 5;
-		// Virtual dimensions
-		// const int NumVDims = 4; // Virtual dimensions
-		int MaxDepth = NumVDims;
-		int NumTris;
-		Tri[] TriRay;
-		int NumPnts;
-		Pnt[] PntRay;
-		int NumRows, NumCols;
-		// String BasePath = @"C:\Users\BCZINRW\Pictures\Blend\";
-		String BasePath = @".\";
-		List<Line> LineRay = new List<Line> ();
-		/* ********************************************************************************************************* */
-		public TriDivide ()
+  class TriDivide {
+    // Recursive triangle division by 2, for hypercube
+    double Radius = 1.0;
+    // const int NumVDims = 8;// Virtual dimensions
+    const int NumVDims = 5;
+    // Virtual dimensions
+    // const int NumVDims = 4; // Virtual dimensions
+    int MaxDepth = NumVDims;
+    int NumTris;
+    Tri[] TriRay;
+    int NumPnts;
+    Pnt[] PntRay;
+    int NumRows, NumCols;
+    // String BasePath = @"C:\Users\BCZINRW\Pictures\Blend\";
+    String BasePath = @".\";
+    List<Line> LineRay = new List<Line> ();
+    /* ********************************************************************************************************* */
+    public TriDivide ()
 		{
-			NumTris = 1 << MaxDepth;
-			TriRay = new Tri[NumTris];
+      NumTris = 1 << MaxDepth;
+      TriRay = new Tri[NumTris];
 
-			int HalfNumVDims = NumVDims >> 1;
-			int SqrtOfNumTris = 1 << HalfNumVDims;// square root of NumTris
+      int HalfNumVDims = NumVDims >> 1;
+      int SqrtOfNumTris = 1 << HalfNumVDims;// square root of NumTris
 
-			int IsOdd = (NumVDims % 2);
-			this.NumRows = ((SqrtOfNumTris) + 1);
-			this.NumCols = (((SqrtOfNumTris) * (1 + IsOdd)) + 1);
+      int IsOdd = (NumVDims % 2);
+      this.NumRows = ((SqrtOfNumTris) + 1);
+      this.NumCols = (((SqrtOfNumTris) * (1 + IsOdd)) + 1);
 
-			NumPnts = NumRows * NumCols;// inefficent, use triangle grid instead 
-			PntRay = new Pnt[NumPnts];
+      NumPnts = NumRows * NumCols;// inefficent, use triangle grid instead 
+      PntRay = new Pnt[NumPnts];
 
-			/*
+      /*
 triangle grid indexing 
 isodd = (NumVDims mod 2)
 num of rows will be (sqrt(2^NumVDims) + 1)
 num of cols will be {[sqrt(2^NumVDims) * (1+isodd)] + 1}
              */
-			Run ();
-			DumpPntRay ();
-			DumpTriVerts ();
-			// DumpLines();
-			// DumpTriCenters();
+      Run ();
+      DumpPntRay ();
+      DumpTriVerts ();
+      // DumpLines();
+      // DumpTriCenters();
 		}
-		/* ********************************************************************************************************* */
-		public void DumpPntRay()
+    /* ********************************************************************************************************* */
+    public void DumpPntRay()
 		{
-			Pnt pt;
-			StringBuilder sb = new StringBuilder ();
-			sb.Append ("o Points" + Environment.NewLine);
-			for (int pcnt = 0; pcnt < this.NumPnts; pcnt++) {
-				pt = PntRay [pcnt];
-				if (pt != null) {
-					String txtln = String.Format ("v {0:0.000000} {1:0.000000} {2:0.000000}", pt.Loc [0], pt.Loc [1], pt.Loc [2]);
-					sb.Append (txtln + Environment.NewLine);
+      Pnt pt;
+      StringBuilder sb = new StringBuilder ();
+      sb.Append ("o Points" + Environment.NewLine);
+      for (int pcnt = 0; pcnt < this.NumPnts; pcnt++) {
+        pt = PntRay [pcnt];
+        if (pt != null) {
+          String txtln = String.Format ("v {0:0.000000} {1:0.000000} {2:0.000000}", pt.Loc [0], pt.Loc [1], pt.Loc [2]);
+          sb.Append (txtln + Environment.NewLine);
 				}
 			}
-			File.WriteAllText (BasePath + @"pcloud5.obj", sb.ToString ());
+      File.WriteAllText (BasePath + @"pcloud5.obj", sb.ToString ());
 		}
-		/* ********************************************************************************************************* */
-		public void DumpTriVerts()
+    /* ********************************************************************************************************* */
+    public void DumpTriVerts()
 		{
-			Pnt pt;
-			StringBuilder sb = new StringBuilder ();
-			sb.Append ("o Cloud" + Environment.NewLine);
-			for (int tcnt = 0; tcnt < NumTris; tcnt++) {
-				Tri tri = TriRay [tcnt];
-				for (int pcnt = 0; pcnt < 3; pcnt++) {
-					pt = tri.Vtx [pcnt];
-					String txtln = String.Format ("v {0:0.000000} {1:0.000000} {2:0.000000}", pt.Loc [0], pt.Loc [1], pt.Loc [2]);
-					sb.Append (txtln + Environment.NewLine);
+      Pnt pt;
+      StringBuilder sb = new StringBuilder ();
+      sb.Append ("o Cloud" + Environment.NewLine);
+      for (int tcnt = 0; tcnt < NumTris; tcnt++) {
+        Tri tri = TriRay [tcnt];
+        for (int pcnt = 0; pcnt < 3; pcnt++) {
+          pt = tri.Vtx [pcnt];
+          String txtln = String.Format ("v {0:0.000000} {1:0.000000} {2:0.000000}", pt.Loc [0], pt.Loc [1], pt.Loc [2]);
+          sb.Append (txtln + Environment.NewLine);
 				}
 			}
-			File.WriteAllText (BasePath + @"pcloud4.obj", sb.ToString ());
+      File.WriteAllText (BasePath + @"pcloud4.obj", sb.ToString ());
 		}
-		/* ********************************************************************************************************* */
-		public void DumpTris()
+    /* ********************************************************************************************************* */
+    public void DumpTris()
 		{
-			Pnt pt;
-			StringBuilder sb = new StringBuilder ();
-			sb.Append ("o Tris" + Environment.NewLine);
-			#if false
+      Pnt pt;
+      StringBuilder sb = new StringBuilder ();
+      sb.Append ("o Tris" + Environment.NewLine);
+      #if false
             int pcnt = 0;
             for (int lcnt = 0; lcnt < LineRay.Count; lcnt++)
             {
@@ -132,23 +132,23 @@ num of cols will be {[sqrt(2^NumVDims) * (1+isodd)] + 1}
                     sb.Append(txtln + Environment.NewLine);
                 }
             }
-			#endif
-			File.WriteAllText (BasePath + @"pcloud4.obj", sb.ToString ());
+      #endif
+      File.WriteAllText (BasePath + @"pcloud4.obj", sb.ToString ());
 		}
-		/* ********************************************************************************************************* */
-		public void DumpTriCenters()
+    /* ********************************************************************************************************* */
+    public void DumpTriCenters()
 		{
-			Pnt pt = new Pnt ();
-			StringBuilder sb = new StringBuilder ();
-			sb.Append ("o Cloud" + Environment.NewLine);
-			for (int tcnt = 0; tcnt < NumTris; tcnt++) {
-				Tri tri = TriRay [tcnt];
-				tri.GetCenter (pt);
-				String txtln = String.Format ("v {0:0.000000} {1:0.000000} {2:0.000000}", pt.Loc [0], pt.Loc [1], pt.Loc [2]);
-				sb.Append (txtln + Environment.NewLine);
+      Pnt pt = new Pnt ();
+      StringBuilder sb = new StringBuilder ();
+      sb.Append ("o Cloud" + Environment.NewLine);
+      for (int tcnt = 0; tcnt < NumTris; tcnt++) {
+        Tri tri = TriRay [tcnt];
+        tri.GetCenter (pt);
+        String txtln = String.Format ("v {0:0.000000} {1:0.000000} {2:0.000000}", pt.Loc [0], pt.Loc [1], pt.Loc [2]);
+        sb.Append (txtln + Environment.NewLine);
 			}
-			File.WriteAllText (BasePath + @"pcloud2.obj", sb.ToString ());
-			/*
+      File.WriteAllText (BasePath + @"pcloud2.obj", sb.ToString ());
+      /*
 # Blender v2.71 (sub 0) OBJ File: ''
 # www.blender.org
 o Cube
@@ -170,37 +170,37 @@ f 5 1 4 8
 
 */
 		}
-		/* ********************************************************************************************************* */
-		public void DumpLines()
+    /* ********************************************************************************************************* */
+    public void DumpLines()
 		{
-			Pnt pt0, pt1;
-			StringBuilder sb = new StringBuilder ();
-			sb.Append ("o Frame" + Environment.NewLine);
-			int pcnt = 0;
-			for (int lcnt = 0; lcnt < LineRay.Count; lcnt++) {
-				Line ln = LineRay [lcnt];
+      Pnt pt0, pt1;
+      StringBuilder sb = new StringBuilder ();
+      sb.Append ("o Frame" + Environment.NewLine);
+      int pcnt = 0;
+      for (int lcnt = 0; lcnt < LineRay.Count; lcnt++) {
+        Line ln = LineRay [lcnt];
 
-				pcnt++;
-				ln.Pdex [0] = pcnt;
-				pt0 = ln.Vtx [0];
+        pcnt++;
+        ln.Pdex [0] = pcnt;
+        pt0 = ln.Vtx [0];
 
-				pcnt++;
-				ln.Pdex [1] = pcnt;
-				pt1 = ln.Vtx [1];
+        pcnt++;
+        ln.Pdex [1] = pcnt;
+        pt1 = ln.Vtx [1];
 
-				String txtln0 = String.Format ("v {0:0.000000} {1:0.000000} {2:0.000000}", pt0.Loc [0], pt0.Loc [1], pt0.Loc [2]);
-				String txtln1 = String.Format ("v {0:0.000000} {1:0.000000} {2:0.000000}", pt1.Loc [0], pt1.Loc [1], pt1.Loc [2]);
+        String txtln0 = String.Format ("v {0:0.000000} {1:0.000000} {2:0.000000}", pt0.Loc [0], pt0.Loc [1], pt0.Loc [2]);
+        String txtln1 = String.Format ("v {0:0.000000} {1:0.000000} {2:0.000000}", pt1.Loc [0], pt1.Loc [1], pt1.Loc [2]);
 
-				sb.Append (txtln0 + Environment.NewLine);
-				sb.Append (txtln1 + Environment.NewLine);
+        sb.Append (txtln0 + Environment.NewLine);
+        sb.Append (txtln1 + Environment.NewLine);
 			}
-			for (int lcnt = 0; lcnt < LineRay.Count; lcnt++) {
-				Line ln = LineRay [lcnt];
-				String txtln0 = String.Format ("l {0} {1}", ln.Pdex [0], ln.Pdex [1]);
-				sb.Append (txtln0 + Environment.NewLine);
+      for (int lcnt = 0; lcnt < LineRay.Count; lcnt++) {
+        Line ln = LineRay [lcnt];
+        String txtln0 = String.Format ("l {0} {1}", ln.Pdex [0], ln.Pdex [1]);
+        sb.Append (txtln0 + Environment.NewLine);
 			}
-			File.WriteAllText (BasePath + @"wires.obj", sb.ToString ());
-			/*
+      File.WriteAllText (BasePath + @"wires.obj", sb.ToString ());
+      /*
                 # Blender v2.71 (sub 0) OBJ File: ''
                 # www.blender.org
                 mtllib wireframe.mtl
@@ -227,148 +227,149 @@ f 5 1 4 8
                 l 7 8
             */
 		}
-		/* ********************************************************************************************************* */
-		public void Run()
+    /* ********************************************************************************************************* */
+    public void Run()
 		{
-			Tri octant = new Tri ();// Start with (0,0,1), (0,1,0), (1,0,0) for one octant of sphere 
-			octant.Vtx [0].Assign (0, 0, 1);
-			octant.Vtx [1].Assign (0, 1, 0);
-			octant.Vtx [2].Assign (1, 0, 0);
+      Tri octant = new Tri ();// Start with (0,0,1), (0,1,0), (1,0,0) for one octant of sphere 
+      octant.Vtx [0].Assign (0, 0, 1);
+      octant.Vtx [1].Assign (0, 1, 0);
+      octant.Vtx [2].Assign (1, 0, 0);
 
-			octant.Vtx [0].AssignDex (0, 0);// indexes on big triangle grid 
-			octant.Vtx [1].AssignDex (0, this.NumRows - 1);
-			octant.Vtx [2].AssignDex (this.NumCols - 1, this.NumRows - 1);
+      octant.Vtx [0].AssignDex (0, 0);// indexes on big triangle grid 
+      octant.Vtx [1].AssignDex (0, this.NumRows - 1);
+      octant.Vtx [2].AssignDex (this.NumCols - 1, this.NumRows - 1);
 
-			InsertPnt (octant.Vtx [0]);
-			InsertPnt (octant.Vtx [1]);
-			InsertPnt (octant.Vtx [2]);
+      InsertPnt (octant.Vtx [0]);
+      InsertPnt (octant.Vtx [1]);
+      InsertPnt (octant.Vtx [2]);
 
-			Tri_Split (octant, 0, 0);
+      Tri_Split (octant, 0, 0);
 		}
-		/* ********************************************************************************************************* */
-		public void InsertPnt(Pnt pnt)
+    /* ********************************************************************************************************* */
+    public void InsertPnt(Pnt pnt)
 		{
-			int PDex = MapToPntRay (pnt.Dex [0], pnt.Dex [1]);
-			this.PntRay [PDex] = pnt;
+      int PDex = MapToPntRay (pnt.Dex [0], pnt.Dex [1]);
+      this.PntRay [PDex] = pnt;
 		}
-		/* ********************************************************************************************************* */
-		public class Pnt {
-			public double[] Loc = new double[3];
-			public int[] Dex = new int[2];
-			public Pnt CloneMe()
+    /* ********************************************************************************************************* */
+    public class Pnt {
+      public double[] Loc = new double[3];
+      public int[] Dex = new int[2];
+      public Pnt CloneMe()
 			{
-				Pnt child = new Pnt ();
-				for (int dcnt = 0; dcnt < 3; dcnt++) {
-					child.Loc [dcnt] = this.Loc [dcnt];
+        Pnt child = new Pnt ();
+        for (int dcnt = 0; dcnt < 3; dcnt++) {
+          child.Loc [dcnt] = this.Loc [dcnt];
 				}
-				return child;
+        return child;
 			}
-			public void Copy(Pnt other)
+      public void Copy(Pnt other)
 			{
-				for (int dcnt = 0; dcnt < 3; dcnt++) {
-					this.Loc [dcnt] = other.Loc [dcnt];
+        for (int dcnt = 0; dcnt < 3; dcnt++) {
+          this.Loc [dcnt] = other.Loc [dcnt];
 				}
-				for (int dcnt = 0; dcnt < 2; dcnt++) {
-					this.Dex [dcnt] = other.Dex [dcnt];
-				}
-			}
-			public void Zero()
-			{
-				for (int dcnt = 0; dcnt < 3; dcnt++) {
-					this.Loc [dcnt] = 0.0; 
+        for (int dcnt = 0; dcnt < 2; dcnt++) {
+          this.Dex [dcnt] = other.Dex [dcnt];
 				}
 			}
-			public void Add(Pnt other)
+      public void Zero()
 			{
-				for (int dcnt = 0; dcnt < 3; dcnt++) {
-					this.Loc [dcnt] += other.Loc [dcnt];
+        for (int dcnt = 0; dcnt < 3; dcnt++) {
+          this.Loc [dcnt] = 0.0; 
 				}
 			}
-			public void Difference(Pnt other, Pnt Result)
+      public void Add(Pnt other)
 			{
-				for (int dcnt = 0; dcnt < 3; dcnt++) {
-					Result.Loc [dcnt] = this.Loc [dcnt] - other.Loc [dcnt];
+        for (int dcnt = 0; dcnt < 3; dcnt++) {
+          this.Loc [dcnt] += other.Loc [dcnt];
 				}
 			}
-			public void Multiply(double factor)
+      public void Difference(Pnt other, Pnt Result)
 			{
-				for (int dcnt = 0; dcnt < 3; dcnt++) {
-					this.Loc [dcnt] *= factor;
+        for (int dcnt = 0; dcnt < 3; dcnt++) {
+          Result.Loc [dcnt] = this.Loc [dcnt] - other.Loc [dcnt];
 				}
 			}
-			public double GetMagnitude()
+      public void Multiply(double factor)
+			{
+        for (int dcnt = 0; dcnt < 3; dcnt++) {
+          this.Loc [dcnt] *= factor;
+				}
+			}
+      public double GetMagnitude()
 			{ // from 0,0,0
-				double SumSq = 0;
-				double Value;
-				for (int dcnt = 0; dcnt < 3; dcnt++) {
-					Value = this.Loc [dcnt];
-					SumSq += Value * Value;
+        double SumSq = 0;
+        double Value;
+        for (int dcnt = 0; dcnt < 3; dcnt++) {
+          Value = this.Loc [dcnt];
+          SumSq += Value * Value;
 				}
-				SumSq = Math.Sqrt (SumSq);
-				return SumSq;
+        SumSq = Math.Sqrt (SumSq);
+        return SumSq;
 			}
-			/* ********************************************************************************************************* */
-			public void MapToSphere(double Radius)
+      /* ********************************************************************************************************* */
+      public void MapToSphere(double Radius)
 			{
-				double dist = this.GetMagnitude (); // from 0,0,0
-				double factor = Radius / dist;
-				for (int dcnt = 0; dcnt < 3; dcnt++) {
-					this.Loc [dcnt] *= factor;
+        double dist = this.GetMagnitude (); // from 0,0,0
+        double factor = Radius / dist;
+        for (int dcnt = 0; dcnt < 3; dcnt++) {
+          this.Loc [dcnt] *= factor;
 				}
 			}
-			/* ********************************************************************************************************* */
-			public void Assign(double d0, double d1, double d2)
+      /* ********************************************************************************************************* */
+      public void Assign(double d0, double d1, double d2)
 			{
-				this.Loc [0] = d0;
-				this.Loc [1] = d1;
-				this.Loc [2] = d2;
+        this.Loc [0] = d0;
+        this.Loc [1] = d1;
+        this.Loc [2] = d2;
 			}
-			/* ********************************************************************************************************* */
-			public void AssignDex(int d0, int d1)
+      /* ********************************************************************************************************* */
+      public void AssignDex(int d0, int d1)
 			{
-				this.Dex [0] = d0;
-				this.Dex [1] = d1;
+        this.Dex [0] = d0;
+        this.Dex [1] = d1;
 			}
-			/* ********************************************************************************************************* */
-			public void Delete(){ }
+      /* ********************************************************************************************************* */
+      public void Delete(){ }
 		}
-		/* ********************************************************************************************************* */
-		public class Line {
-			public Pnt[] Vtx = new Pnt[2];
-			public int[] Pdex = new int[2];
-			// indexes to vertex list for my endpoints
-			/* ********************************************************************************************************* */
-			public Line ()
+    /* ********************************************************************************************************* */
+    public class Line {
+      public Pnt[] Vtx = new Pnt[2];
+      public int[] Pdex = new int[2];
+      // indexes to vertex list for my endpoints
+      /* ********************************************************************************************************* */
+      public Line ()
 			{
-				for (int pcnt = 0; pcnt < 2; pcnt++) {
-					this.Vtx [pcnt] = new Pnt ();
+        for (int pcnt = 0; pcnt < 2; pcnt++) {
+          this.Vtx [pcnt] = new Pnt ();
 				}
 			}
-			/* ********************************************************************************************************* */
-			public void Connect(Pnt p0, Pnt p1)
+      /* ********************************************************************************************************* */
+      public void Connect(Pnt p0, Pnt p1)
 			{
-				this.Vtx [0]=p0; this.Vtx [1]=p1;
+        this.Vtx [0] = p0;
+        this.Vtx [1] = p1;
 			}
-			/* ********************************************************************************************************* */
-			public void Assign(Pnt p0, Pnt p1)
+      /* ********************************************************************************************************* */
+      public void Assign(Pnt p0, Pnt p1)
 			{
-				this.Vtx [0].Copy (p0);
-				this.Vtx [1].Copy (p1);
+        this.Vtx [0].Copy (p0);
+        this.Vtx [1].Copy (p1);
 			}
-			/* ********************************************************************************************************* */
-			public void Subtract(double Chop)
+      /* ********************************************************************************************************* */
+      public void Subtract(double Chop)
 			{
-				Pnt p0 = new Pnt (), p1 = new Pnt ();
-				p0.Copy (this.Vtx [0]);
-				p1.Copy (this.Vtx [1]);
-				p0.Multiply (-1);
-				p1.Add (p0);// move this line to 0,0,0
-				double len = p1.GetMagnitude ();
-				double NextLen = len - Chop;
-				double Ratio = NextLen / len;
-				p1.Multiply (Ratio);// mult this line by that ratio
-				p1.Add (this.Vtx [0]);// move this line back to its place 
-				this.Vtx [1].Copy (p1);
+        Pnt p0 = new Pnt (), p1 = new Pnt ();
+        p0.Copy (this.Vtx [0]);
+        p1.Copy (this.Vtx [1]);
+        p0.Multiply (-1);
+        p1.Add (p0);// move this line to 0,0,0
+        double len = p1.GetMagnitude ();
+        double NextLen = len - Chop;
+        double Ratio = NextLen / len;
+        p1.Multiply (Ratio);// mult this line by that ratio
+        p1.Add (this.Vtx [0]);// move this line back to its place 
+        this.Vtx [1].Copy (p1);
 #if false
                 shorten this line by Chop amount
                 first, get magnitude of this line
@@ -380,181 +381,181 @@ f 5 1 4 8
 #endif
 			}
 		}
-		/* ********************************************************************************************************* */
-		public class Tri {
-			public int BitAddress = 0;
-			// assign adecuados shift bits
-			public int RecurDepth = 0;
-			// for whatever reason
-			public Pnt[] Vtx = new Pnt[3];
-			public int[] Pdex = new int[3];
+    /* ********************************************************************************************************* */
+    public class Tri {
+      public int BitAddress = 0;
+      // assign adecuados shift bits
+      public int RecurDepth = 0;
+      // for whatever reason
+      public Pnt[] Vtx = new Pnt[3];
+      public int[] Pdex = new int[3];
 			
-			public Tri ()
+      public Tri ()
 			{
-				for (int pcnt = 0; pcnt < 3; pcnt++) {
-					this.Vtx [pcnt] = new Pnt ();
+        for (int pcnt = 0; pcnt < 3; pcnt++) {
+          this.Vtx [pcnt] = new Pnt ();
 				}
 			}
-			/* ********************************************************************************************************* */
-			public void Connect(Pnt p0, Pnt p1, Pnt p2)
+      /* ********************************************************************************************************* */
+      public void Connect(Pnt p0, Pnt p1, Pnt p2)
 			{
-				this.Vtx [0] = p0;
-				this.Vtx [1] = p1;
-				this.Vtx [2] = p2;
+        this.Vtx [0] = p0;
+        this.Vtx [1] = p1;
+        this.Vtx [2] = p2;
 			}
-			/* ********************************************************************************************************* */
-			public void Assign(Pnt p0, Pnt p1, Pnt p2)
+      /* ********************************************************************************************************* */
+      public void Assign(Pnt p0, Pnt p1, Pnt p2)
 			{
-				this.Vtx [0].Copy (p0);
-				this.Vtx [1].Copy (p1);
-				this.Vtx [2].Copy (p2);
+        this.Vtx [0].Copy (p0);
+        this.Vtx [1].Copy (p1);
+        this.Vtx [2].Copy (p2);
 			}
-			/* ********************************************************************************************************* */
-			public void GetCenter(Pnt ptresult)
+      /* ********************************************************************************************************* */
+      public void GetCenter(Pnt ptresult)
 			{// Return the center of the triangle
-				ptresult.Zero ();// average them all 
-				for (int pcnt = 0; pcnt < 3; pcnt++) {
-					ptresult.Add (this.Vtx [pcnt]);
+        ptresult.Zero ();// average them all 
+        for (int pcnt = 0; pcnt < 3; pcnt++) {
+          ptresult.Add (this.Vtx [pcnt]);
 				}
-				ptresult.Multiply (1.0 / 3.0);
+        ptresult.Multiply (1.0 / 3.0);
 			}
-			/* ********************************************************************************************************* */
-			public void Delete()
+      /* ********************************************************************************************************* */
+      public void Delete()
 			{
-				for (int pcnt = 0; pcnt < 3; pcnt++) {
-					this.Vtx [pcnt].Delete ();
+        for (int pcnt = 0; pcnt < 3; pcnt++) {
+          this.Vtx [pcnt].Delete ();
 				}
 			}
 		}
-		/* ********************************************************************************************************* */
-		public int MapToPntRay(int XDex, int YDex)
+    /* ********************************************************************************************************* */
+    public int MapToPntRay(int XDex, int YDex)
 		{
-			int Dex = (YDex * this.NumCols) + XDex;// simple inefficient rectangular grid 
-			return Dex;
+      int Dex = (YDex * this.NumCols) + XDex;// simple inefficient rectangular grid 
+      return Dex;
 		}
-		int[] Dex = new int[2];
-		/* ********************************************************************************************************* */
-		void Tri_Split(Tri tri, int SplitVtxDex, int RecurDepth)
+    int[] Dex = new int[2];
+    /* ********************************************************************************************************* */
+    void Tri_Split(Tri tri, int SplitVtxDex, int RecurDepth)
 		{
-			tri.RecurDepth = RecurDepth;// maybe needed sometime? 
-			if (RecurDepth >= MaxDepth) {
-				TriRay [tri.BitAddress] = tri;
-				return;
+      tri.RecurDepth = RecurDepth;// maybe needed sometime? 
+      if (RecurDepth >= MaxDepth) {
+        TriRay [tri.BitAddress] = tri;
+        return;
 			}
 
-			Pnt SplitVtx = tri.Vtx [SplitVtxDex];
-			int LeftVertDex = (SplitVtxDex + 1);
-			if (LeftVertDex >= 3) {
-				LeftVertDex -= 3;
+      Pnt SplitVtx = tri.Vtx [SplitVtxDex];
+      int LeftVertDex = (SplitVtxDex + 1);
+      if (LeftVertDex >= 3) {
+        LeftVertDex -= 3;
 			}
-			int RightVertDex = (SplitVtxDex - 1);
-			if (RightVertDex < 0) {
-				RightVertDex += 3;
+      int RightVertDex = (SplitVtxDex - 1);
+      if (RightVertDex < 0) {
+        RightVertDex += 3;
 			}
 
-			Pnt RightVert = tri.Vtx [RightVertDex];// ClockVert
-			Pnt LeftVert = tri.Vtx [LeftVertDex];// AntiClockVert
+      Pnt RightVert = tri.Vtx [RightVertDex];// ClockVert
+      Pnt LeftVert = tri.Vtx [LeftVertDex];// AntiClockVert
 
-			Pnt ResultVtx;
-			int PDex;
+      Pnt ResultVtx;
+      int PDex;
 
-			if (true) {// Discover or create new point, bisecting opposite side
-				SplitIndexes (LeftVert, RightVert, Dex);
-				PDex = MapToPntRay (Dex [0], Dex [1]);
-				ResultVtx = this.PntRay [PDex];
-				if (ResultVtx == null) {
-					ResultVtx = new Pnt ();// not found, create new point bisecting opposite side
-					SplitLine (LeftVert, RightVert, ResultVtx);
-					for (int dcnt = 0; dcnt < 2; dcnt++) {
-						ResultVtx.Dex [dcnt] = Dex [dcnt];
+      if (true) {// Discover or create new point, bisecting opposite side
+        SplitIndexes (LeftVert, RightVert, Dex);
+        PDex = MapToPntRay (Dex [0], Dex [1]);
+        ResultVtx = this.PntRay [PDex];
+        if (ResultVtx == null) {
+          ResultVtx = new Pnt ();// not found, create new point bisecting opposite side
+          SplitLine (LeftVert, RightVert, ResultVtx);
+          for (int dcnt = 0; dcnt < 2; dcnt++) {
+            ResultVtx.Dex [dcnt] = Dex [dcnt];
 					}
-					// ResultVtx.MapToSphere(Radius);// move pt to sphere
-					this.PntRay [PDex] = ResultVtx;
+          // ResultVtx.MapToSphere(Radius);// move pt to sphere
+          this.PntRay [PDex] = ResultVtx;
 				}
 			}
 
-			if (false) {
-				ResultVtx.MapToSphere (Radius);// move pt to sphere
+      if (false) {
+        ResultVtx.MapToSphere (Radius);// move pt to sphere
 			} else {
-				Line ln = new Line ();
-				ln.Assign(ResultVtx, tri.Vtx[SplitVtxDex]);
-				ln.Subtract (0.05);
-				this.LineRay.Add (ln);
+        Line ln = new Line ();
+        ln.Assign (ResultVtx, tri.Vtx [SplitVtxDex]);
+        ln.Subtract (0.05);
+        this.LineRay.Add (ln);
 			}
 
-			// Create tri 0, 'left' of bisecting line 
-			Tri tri0 = new Tri ();// apex + anticlock_angle + newpt;
-			tri0.Connect (ResultVtx, SplitVtx, LeftVert);
-			tri0.BitAddress = tri.BitAddress;
-			tri0.BitAddress <<= 1;
-			tri0.BitAddress |= 0x0;// nop, just a note to self
+      // Create tri 0, 'left' of bisecting line 
+      Tri tri0 = new Tri ();// apex + anticlock_angle + newpt;
+      tri0.Connect (ResultVtx, SplitVtx, LeftVert);
+      tri0.BitAddress = tri.BitAddress;
+      tri0.BitAddress <<= 1;
+      tri0.BitAddress |= 0x0;// nop, just a note to self
 
-			// Create tri 1, 'right' of bisecting line 
-			Tri tri1 = new Tri ();// apex + clock_angle + newpt;
-			tri1.Connect (ResultVtx, RightVert, SplitVtx);
-			tri1.BitAddress = tri.BitAddress;
-			tri1.BitAddress <<= 1;
-			tri1.BitAddress |= 0x1;
+      // Create tri 1, 'right' of bisecting line 
+      Tri tri1 = new Tri ();// apex + clock_angle + newpt;
+      tri1.Connect (ResultVtx, RightVert, SplitVtx);
+      tri1.BitAddress = tri.BitAddress;
+      tri1.BitAddress <<= 1;
+      tri1.BitAddress |= 0x1;
 
-			Tri_Split (tri0, 0, RecurDepth + 1);// 0 is index of Result vertex for both sub-triangles 
-			Tri_Split (tri1, 0, RecurDepth + 1);
+      Tri_Split (tri0, 0, RecurDepth + 1);// 0 is index of Result vertex for both sub-triangles 
+      Tri_Split (tri1, 0, RecurDepth + 1);
 
-			// tri0.Delete(); tri1.Delete();
+      // tri0.Delete(); tri1.Delete();
 		}
-		/* ********************************************************************************************************* */
-		void SplitLine(Pnt pt0, Pnt pt1, Pnt ptresult)
+    /* ********************************************************************************************************* */
+    void SplitLine(Pnt pt0, Pnt pt1, Pnt ptresult)
 		{// Return the midpoint of a line 
-			for (int dcnt = 0; dcnt < 3; dcnt++) {// from 0,0,0
-				ptresult.Loc [dcnt] = (pt0.Loc [dcnt] + pt1.Loc [dcnt]) / 2.0;
+      for (int dcnt = 0; dcnt < 3; dcnt++) {// from 0,0,0
+        ptresult.Loc [dcnt] = (pt0.Loc [dcnt] + pt1.Loc [dcnt]) / 2.0;
 			}
-			for (int dcnt = 0; dcnt < 2; dcnt++) {// calculate new index in 2d point grid 
-				ptresult.Dex [dcnt] = (pt0.Dex [dcnt] + pt1.Dex [dcnt]) >> 1;
-			}
-		}
-		/* ********************************************************************************************************* */
-		void SplitIndexes(Pnt pt0, Pnt pt1, int[] Dex)
-		{
-			for (int dcnt = 0; dcnt < 2; dcnt++) {// calculate new index in 2d point grid 
-				Dex [dcnt] = (pt0.Dex [dcnt] + pt1.Dex [dcnt]) >> 1;
+      for (int dcnt = 0; dcnt < 2; dcnt++) {// calculate new index in 2d point grid 
+        ptresult.Dex [dcnt] = (pt0.Dex [dcnt] + pt1.Dex [dcnt]) >> 1;
 			}
 		}
-		/* ********************************************************************************************************* */
-		void SuspendConnection(Pnt ctr, double Radius, Pnt pt0, Pnt pt1)
+    /* ********************************************************************************************************* */
+    void SplitIndexes(Pnt pt0, Pnt pt1, int[] Dex)
 		{
-			Pnt ChordVect = new Pnt ();
-			pt1.Difference (pt0, ChordVect);// straight line from p0 to p1
-			double ChordLen = ChordVect.GetMagnitude ();
-			double HalfChordLen = (ChordLen / 2);
+      for (int dcnt = 0; dcnt < 2; dcnt++) {// calculate new index in 2d point grid 
+        Dex [dcnt] = (pt0.Dex [dcnt] + pt1.Dex [dcnt]) >> 1;
+			}
+		}
+    /* ********************************************************************************************************* */
+    void SuspendConnection(Pnt ctr, double Radius, Pnt pt0, Pnt pt1)
+		{
+      Pnt ChordVect = new Pnt ();
+      pt1.Difference (pt0, ChordVect);// straight line from p0 to p1
+      double ChordLen = ChordVect.GetMagnitude ();
+      double HalfChordLen = (ChordLen / 2);
 
-			// Radius is redundant, we could get it from magnitude of pt0 or pt1 
-			// CtrToChord is ctr to ChordVect, magnitude 
-			double CtrToChord = Math.Sqrt ((Radius * Radius) - (HalfChordLen * HalfChordLen)); // pythag 
-			double TangentRatio = HalfChordLen / CtrToChord;// ratio of opposite/adjacent 
-			double extra = TangentRatio * HalfChordLen;// extra distance from CtrToChord to orbit 
-			double orbitmag = CtrToChord + extra;// full orbit distance from center 
-			double orbitratio = orbitmag / CtrToChord;
+      // Radius is redundant, we could get it from magnitude of pt0 or pt1 
+      // CtrToChord is ctr to ChordVect, magnitude 
+      double CtrToChord = Math.Sqrt ((Radius * Radius) - (HalfChordLen * HalfChordLen)); // pythag 
+      double TangentRatio = HalfChordLen / CtrToChord;// ratio of opposite/adjacent 
+      double extra = TangentRatio * HalfChordLen;// extra distance from CtrToChord to orbit 
+      double orbitmag = CtrToChord + extra;// full orbit distance from center 
+      double orbitratio = orbitmag / CtrToChord;
 
-			Pnt ChordMiddle = new Pnt ();// Get vect from ctr to middle of chord by averaging the endpoints. 
-			ChordMiddle.Copy (pt0);
-			ChordMiddle.Add (pt1);
-			ChordMiddle.Multiply (0.5);
+      Pnt ChordMiddle = new Pnt ();// Get vect from ctr to middle of chord by averaging the endpoints. 
+      ChordMiddle.Copy (pt0);
+      ChordMiddle.Add (pt1);
+      ChordMiddle.Multiply (0.5);
 
-			Pnt orbitpoint = new Pnt ();// orbitpoint = ChordMiddle * orbitratio;// center of circle/sphere whose edges are perpendicular to surface 
-			orbitpoint.Copy (ChordMiddle);
-			orbitpoint.Multiply (orbitratio);// stretch the chord middle out to orbit 
+      Pnt orbitpoint = new Pnt ();// orbitpoint = ChordMiddle * orbitratio;// center of circle/sphere whose edges are perpendicular to surface 
+      orbitpoint.Copy (ChordMiddle);
+      orbitpoint.Multiply (orbitratio);// stretch the chord middle out to orbit 
 
-			Pnt EdgeToMoon = new Pnt ();// dist from chord endpoint to orbitpoint is radius of moon 
-			orbitpoint.Difference (pt0, EdgeToMoon);
-			double MoonRadius = EdgeToMoon.GetMagnitude ();
+      Pnt EdgeToMoon = new Pnt ();// dist from chord endpoint to orbitpoint is radius of moon 
+      orbitpoint.Difference (pt0, EdgeToMoon);
+      double MoonRadius = EdgeToMoon.GetMagnitude ();
 
-			double endangle = Math.Asin (HalfChordLen / MoonRadius); // opposite over hypot 
-			double startangle = -endangle;
-			double step = (endangle - startangle) / 10.0;
-			for (double angle = startangle; angle <= endangle; angle += step) {
-				// XTravel = HalfChordLen + (sin(angle) * MoonRadius); // not right, starts in the wrong place 
-				// or 
-				// XTravelFactor = (sin(angle)) - sin(startangle); // wrong, also need to scale by length of real line 
-				// slowly grow ChordVect along XTravelFactor, and use its 2d X value in circle formula to get arch 
+      double endangle = Math.Asin (HalfChordLen / MoonRadius); // opposite over hypot 
+      double startangle = -endangle;
+      double step = (endangle - startangle) / 10.0;
+      for (double angle = startangle; angle <= endangle; angle += step) {
+        // XTravel = HalfChordLen + (sin(angle) * MoonRadius); // not right, starts in the wrong place 
+        // or 
+        // XTravelFactor = (sin(angle)) - sin(startangle); // wrong, also need to scale by length of real line 
+        // slowly grow ChordVect along XTravelFactor, and use its 2d X value in circle formula to get arch 
 			}
 #if false
 /*
