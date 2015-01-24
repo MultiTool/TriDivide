@@ -27,7 +27,6 @@ namespace TriDivide {
     int NumPnts;
     Pnt[] PntRay;
     int NumRows, NumCols;
-    // String BasePath = @"C:\Users\BCZINRW\Pictures\Blend\";
     String BasePath = @".\";
     List<Line> LineRay = new List<Line> ();
     /* ********************************************************************************************************* */

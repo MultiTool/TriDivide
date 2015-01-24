@@ -40,7 +40,7 @@ class TriDivide {// Recursive triangle division by 2, for hypercube
       String txtln = String.format("v {0:0.000000} {1:0.000000} {2:0.000000}", pt.Loc[0], pt.Loc[1], pt.Loc[2]);
       sb.Append(txtln + Environment.NewLine);
     }
-    File.WriteAllText("C:/Users/BCZINRW/Pictures/Blend/pcloud2.obj", sb.toString());
+    File.WriteAllText("pcloud2.obj", sb.toString());
     /*
      # Blender v2.71 (sub 0) OBJ File: ''
      # www.blender.org
@@ -91,7 +91,7 @@ class TriDivide {// Recursive triangle division by 2, for hypercube
       String txtln0 = String.format("l {0} {1}", ln.Pdex[0], ln.Pdex[1]);
       sb.Append(txtln0 + Environment.NewLine);
     }
-    File.WriteAllText("C:/Users/BCZINRW/Pictures/Blend/wires.obj", sb.ToString());
+    File.WriteAllText("wires.obj", sb.ToString());
     /*
      # Blender v2.71 (sub 0) OBJ File: ''
      # www.blender.org
