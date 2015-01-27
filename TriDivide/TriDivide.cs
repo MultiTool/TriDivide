@@ -19,12 +19,12 @@ namespace TriDivide
     {
         // Recursive triangle division by 2, for hypercube
         double Radius = 1.0;
-        // const int NumVDims = 8;// Virtual dimensions
+        const int NumVDims = 8;// Virtual dimensions
         // const int NumVDims = 5;
         // Virtual dimensions
-        const int NumVDims = 4; // Virtual dimensions
+        //const int NumVDims = 4; // Virtual dimensions
         // const int NumVDims = 2; // Virtual dimensions
-        int MaxDepth = NumVDims;
+        int MaxDimDex = NumVDims - 1; // Virtual dimensions
         int NumTris;
         Tri[] TriRay;
         int NumPnts;
@@ -32,10 +32,11 @@ namespace TriDivide
         int NumRows, NumCols;
         String BasePath = @".\";
         List<Line> LineRay = new List<Line>();
+        List<Line> TreeRay = new List<Line>();
         /* ********************************************************************************************************* */
         public TriDivide()
         {
-            NumTris = 1 << MaxDepth;
+            NumTris = 1 << NumVDims;// 2 to the power of number of dimensions 
             TriRay = new Tri[NumTris];
 
             int HalfNumVDims = NumVDims >> 1;
@@ -55,11 +56,20 @@ namespace TriDivide
       num of cols will be {[sqrt(2^NumVDims) * (1+isodd)] + 1}
                    */
             Run();
-            DumpLines();
+            DumpLines(TreeRay, @"tree.obj");
+            DumpLines(LineRay, @"connections.obj");
             DumpPntRay();
             DumpTriVerts();
             // DumpLines();
-            // DumpTriCenters();
+
+            for (int dcnt = 0; dcnt < NumVDims; dcnt++)
+            {
+                DumpTriCenters(String.Format(@"trictrs{0:D2}.obj", dcnt), dcnt);
+            }
+            //DumpTriCenters(@"trictrs0.obj", 0);
+            //DumpTriCenters(@"trictrs1.obj", 1);
+            //DumpTriCenters(@"trictrs2.obj", 2);
+            //DumpTriCenters(@"trictrs3.obj", 3);
         }
         /* ********************************************************************************************************* */
         public void DumpPntRay()
@@ -142,7 +152,7 @@ namespace TriDivide
             File.WriteAllText(BasePath + @"pcloud4.obj", sb.ToString());
         }
         /* ********************************************************************************************************* */
-        public void DumpTriCenters()
+        public void DumpTriCenters(String FileName, int bitnum)
         {
             Pnt pt = new Pnt();
             StringBuilder sb = new StringBuilder();
@@ -150,11 +160,17 @@ namespace TriDivide
             for (int tcnt = 0; tcnt < NumTris; tcnt++)
             {
                 Tri tri = TriRay[tcnt];
-                tri.GetCenter(pt);
-                String txtln = String.Format("v {0:0.000000} {1:0.000000} {2:0.000000}", pt.Loc[0], pt.Loc[1], pt.Loc[2]);
-                sb.Append(txtln + Environment.NewLine);
+
+                if (((tri.BitAddress >> bitnum) & 0x1) > 0)
+                // if ((tri.BitAddress & 0x1) > 0)
+                // if ((tcnt & 0x1) > 0)
+                {
+                    tri.GetCenter(pt);
+                    String txtln = String.Format("v {0:0.000000} {1:0.000000} {2:0.000000}", pt.Loc[0], pt.Loc[1], pt.Loc[2]);
+                    sb.Append(txtln + Environment.NewLine);
+                }
             }
-            File.WriteAllText(BasePath + @"pcloud2.obj", sb.ToString());
+            File.WriteAllText(BasePath + FileName, sb.ToString());
             /*
       # Blender v2.71 (sub 0) OBJ File: ''
       # www.blender.org
@@ -178,15 +194,15 @@ namespace TriDivide
       */
         }
         /* ********************************************************************************************************* */
-        public void DumpLines()
+        public void DumpLines(List<Line> LineList, String FileName)
         {
             Pnt pt0, pt1;
             StringBuilder sb = new StringBuilder();
             sb.Append("o Frame" + Environment.NewLine);
             int pcnt = 0;
-            for (int lcnt = 0; lcnt < LineRay.Count; lcnt++)
+            for (int lcnt = 0; lcnt < LineList.Count; lcnt++)
             {
-                Line ln = LineRay[lcnt];
+                Line ln = LineList[lcnt];
 
                 pcnt++;
                 ln.Pdex[0] = pcnt;
@@ -202,13 +218,13 @@ namespace TriDivide
                 sb.Append(txtln0 + Environment.NewLine);
                 sb.Append(txtln1 + Environment.NewLine);
             }
-            for (int lcnt = 0; lcnt < LineRay.Count; lcnt++)
+            for (int lcnt = 0; lcnt < LineList.Count; lcnt++)
             {
-                Line ln = LineRay[lcnt];
+                Line ln = LineList[lcnt];
                 String txtln0 = String.Format("l {0} {1}", ln.Pdex[0], ln.Pdex[1]);
                 sb.Append(txtln0 + Environment.NewLine);
             }
-            File.WriteAllText(BasePath + @"wires.obj", sb.ToString());
+            File.WriteAllText(BasePath + FileName, sb.ToString());
             /*
                       # Blender v2.71 (sub 0) OBJ File: ''
                       # www.blender.org
@@ -240,6 +256,8 @@ namespace TriDivide
         public void Run()
         {
             Tri octant = new Tri();// Start with (0,0,1), (0,1,0), (1,0,0) for one octant of sphere 
+
+            octant.BitAddress = 0;
             octant.Vtx[0].Assign(0, 0, 1);
             octant.Vtx[1].Assign(0, 1, 0);
             octant.Vtx[2].Assign(1, 0, 0);
@@ -252,7 +270,7 @@ namespace TriDivide
             InsertPnt(octant.Vtx[1]);
             InsertPnt(octant.Vtx[2]);
 
-            Tri_Split(octant, 0, 0);
+            Tri_Split(octant, 0, 0, false);
 
             ConnectTris();
         }
@@ -456,20 +474,28 @@ namespace TriDivide
         }
         int[] Dex = new int[2];
         /* ********************************************************************************************************* */
-        void Tri_Split(Tri tri, int SplitVtxDex, int RecurDepth)
+        void Tri_Split(Tri tri, int SplitVtxDex, int RecurDepth, bool Flip)
         {
             tri.RecurDepth = RecurDepth;// maybe needed sometime? 
-            if (RecurDepth >= MaxDepth)
+
+            if (RecurDepth >= NumVDims)
             {
                 TriRay[tri.BitAddress] = tri;
                 return;
             }
 
+            int ShiftVal = (MaxDimDex - RecurDepth);
+
+            int FlipBit;
             // Every triangle's children must be arranged symmetrically with those of its twin triangle. 
-            int FlipBit = tri.BitAddress & 1;// if I'm a 0x1 triangle, then my immediate children count right to left. 
+            //FlipBit = tri.BitAddress & 1;// if I'm a 0x1 triangle, then my immediate children count right to left. 
+            // FlipBit = (tri.BitAddress >> ShiftVal) & 1;// if I'm a 0x1 triangle, then my immediate children count right to left. 
             // FlipBit = 0;
+
+            FlipBit = Flip ? 1 : 0;
+
             int LeftBit = FlipBit;
-            int RightBit = FlipBit ^ 1;// opposite of left
+            int RightBit = (~FlipBit) & 1;// opposite of left
 
             Pnt SplitVtx = tri.Vtx[SplitVtxDex];
             int LeftVertDex = (SplitVtxDex + 1);
@@ -500,28 +526,30 @@ namespace TriDivide
                 }
             }
 
-            if (false)
+            if (true)
             {
                 Line ln = new Line();
                 ln.Assign(ResultVtx, tri.Vtx[SplitVtxDex]);
                 ln.Subtract(0.05);
-                this.LineRay.Add(ln);
+                this.TreeRay.Add(ln);
             }
 
             // Create child triangle left of bisecting line 
             Tri TriLeft = new Tri();// apex + anticlock_angle + newpt;
             TriLeft.Connect(ResultVtx, SplitVtx, LeftVert);
             TriLeft.BitAddress = tri.BitAddress;
-            TriLeft.BitAddress <<= 1; TriLeft.BitAddress |= LeftBit;
+            //TriLeft.BitAddress <<= 1; TriLeft.BitAddress |= LeftBit;
+            TriLeft.BitAddress |= (LeftBit << (MaxDimDex - RecurDepth));
 
             // Create child triangle right of bisecting line 
             Tri TriRight = new Tri();// apex + clock_angle + newpt;
             TriRight.Connect(ResultVtx, RightVert, SplitVtx);
             TriRight.BitAddress = tri.BitAddress;
-            TriRight.BitAddress <<= 1; TriRight.BitAddress |= RightBit;
+            //TriRight.BitAddress <<= 1; TriRight.BitAddress |= RightBit;
+            TriRight.BitAddress |= (RightBit << (MaxDimDex - RecurDepth));
 
-            Tri_Split(TriLeft, 0, RecurDepth + 1);// 0 is index of Result vertex for both sub-triangles 
-            Tri_Split(TriRight, 0, RecurDepth + 1);
+            Tri_Split(TriLeft, 0, RecurDepth + 1, false);// 0 is index of Result vertex for both sub-triangles 
+            Tri_Split(TriRight, 0, RecurDepth + 1, true);
 
             // tri0.Delete(); tri1.Delete();
         }
@@ -554,9 +582,11 @@ namespace TriDivide
             {
                 Tri tri = this.TriRay[tcnt];
                 tri.GetCenter(tctr);
+                // System.Console.WriteLine("tcnt:{0}", Convert.ToString(tcnt, 2).PadLeft(8, '0'));
                 for (int dcnt = 0; dcnt < NumVDims; dcnt++)
                 {
                     int nbrdex = tcnt ^ (0x1 << dcnt);
+                    // System.Console.WriteLine("nbrdex:{0}", Convert.ToString(nbrdex, 2).PadLeft(8, '0'));
                     Tri nbr = this.TriRay[nbrdex];
                     nbr.GetCenter(nbrctr);
                     SuspendConnection(Radius, tctr, nbrctr);
@@ -567,9 +597,13 @@ namespace TriDivide
         void SuspendConnection(double Radius, Pnt pt0, Pnt pt1)
         {
             Line ln = new Line();
-            ln.Assign(pt0, pt1);
-            this.LineRay.Add(ln);
-            return;
+
+            if (false)
+            {
+                ln.Assign(pt0, pt1);
+                this.LineRay.Add(ln);
+                return;
+            }
 
             Pnt ChordVect = new Pnt();
             pt1.Difference(pt0, ChordVect);// straight line from p0 to p1
@@ -604,17 +638,22 @@ namespace TriDivide
             double StartHeight = StartCosine * MoonRadius;
             double EndSine = Math.Sin(EndAngle);
             double SineRange = EndSine - StartSine;
-            double step = (EndAngle - StartAngle) / 3.0;
+            double NumSteps = 16.0;
+            double step = (EndAngle - StartAngle) / NumSteps;
             double XTravel = 0, XTravelFactor, XTravelFactorPositive, XTravelFactorNormed;
             Pnt Walker = new Pnt();// walker walks from pt0 to pt1 
             Pnt OffsetNormed = new Pnt();
             Pnt OffsetScaled = new Pnt();
             OffsetNormed.CopyFrom(ChordMiddle); OffsetNormed.Multiply(-1.0); OffsetNormed.Normalize(); // direction from chord toward center 
-            Pnt PrevPnt = pt0;
-            for (double Angle = StartAngle; Angle <= EndAngle; Angle += step)
+            Pnt PrevPnt = new Pnt();
+            PrevPnt.CopyFrom(pt0);
+            //for (double Angle = StartAngle; Angle <= EndAngle; Angle += step)
+            for (double Percent = 0.01; Percent < 1.0; Percent += (1.0 / NumSteps))
             {
+                double Angle = StartAngle + ((EndAngle - StartAngle) * Percent);
+
                 XTravelFactor = (Math.Sin(Angle)); // negative to postive range 
-                XTravelFactorPositive = StartSine + XTravelFactor; // 0 to postive range 
+                XTravelFactorPositive = XTravelFactor - StartSine; // 0 to postive range 
                 XTravelFactorNormed = XTravelFactorPositive / SineRange;// fraction along the way, 0.0 to 1.0  
 
                 XTravel = (XTravelFactor * MoonRadius); // negative to postive range 
@@ -625,15 +664,19 @@ namespace TriDivide
                 // but now walker must be offset by Y arch 
                 // WRONG SO FAR. must adjust yheight to start at height of first point. 
                 // also why not just use cosine? 
-                double YHeight = Math.Sqrt(MoonRadSq / (XTravel * XTravel));// circle formula
+                double YHeight = Math.Sqrt(MoonRadSq - (XTravel * XTravel));// circle formula
                 YHeight -= StartHeight;
                 OffsetNormed.Multiply(YHeight, OffsetScaled);
+                //OffsetNormed.Multiply(0.01, OffsetScaled);
                 Walker.Add(OffsetScaled);
+
+                //ChordVect.Multiply(Percent, Walker);
+                //Walker.Add(pt0);// walker walks from pt0 to pt1 
 
                 ln = new Line();
                 ln.Assign(PrevPnt, Walker);
                 this.LineRay.Add(ln);
-                PrevPnt = Walker;
+                PrevPnt.CopyFrom(Walker);
                 // or 
                 // XTravelFactor = (sin(angle)) - sin(startangle); // wrong, also need to scale by length of real line 
 
