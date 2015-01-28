@@ -19,11 +19,12 @@ namespace TriDivide
     {
         // Recursive triangle division by 2, for hypercube
         double Radius = 1.0;
-        const int NumVDims = 8;// Virtual dimensions
-        // const int NumVDims = 5;
         // Virtual dimensions
+        //const int NumVDims = 1; // Virtual dimensions
+        const int NumVDims = 2; // Virtual dimensions
         //const int NumVDims = 4; // Virtual dimensions
-        // const int NumVDims = 2; // Virtual dimensions
+        //const int NumVDims = 5;
+        //const int NumVDims = 8;// Virtual dimensions
         int MaxDimDex = NumVDims - 1; // Virtual dimensions
         int NumTris;
         Tri[] TriRay;
@@ -42,22 +43,17 @@ namespace TriDivide
             int HalfNumVDims = NumVDims >> 1;
             int SqrtOfNumTris = 1 << HalfNumVDims;// square root of NumTris
 
+            /* triangle grid indexing */
             int IsOdd = (NumVDims % 2);
             this.NumRows = ((SqrtOfNumTris) + 1);
             this.NumCols = (((SqrtOfNumTris) * (1 + IsOdd)) + 1);
-
             NumPnts = NumRows * NumCols;// inefficent, use triangle grid instead 
             PntRay = new Pnt[NumPnts];
 
-            /*
-      triangle grid indexing 
-      isodd = (NumVDims mod 2)
-      num of rows will be (sqrt(2^NumVDims) + 1)
-      num of cols will be {[sqrt(2^NumVDims) * (1+isodd)] + 1}
-                   */
-            Run();
+            Shape shape = new Shape();
+            Run(shape);
             DumpLines(TreeRay, @"tree.obj");
-            DumpLines(LineRay, @"connections.obj");
+            DumpLines(shape.LineRay, @"connections.obj");
             DumpPntRay();
             DumpTriVerts();
             // DumpLines();
@@ -66,10 +62,6 @@ namespace TriDivide
             {
                 DumpTriCenters(String.Format(@"trictrs{0:D2}.obj", dcnt), dcnt);
             }
-            //DumpTriCenters(@"trictrs0.obj", 0);
-            //DumpTriCenters(@"trictrs1.obj", 1);
-            //DumpTriCenters(@"trictrs2.obj", 2);
-            //DumpTriCenters(@"trictrs3.obj", 3);
         }
         /* ********************************************************************************************************* */
         public void DumpPntRay()
@@ -253,7 +245,7 @@ namespace TriDivide
                   */
         }
         /* ********************************************************************************************************* */
-        public void Run()
+        public void Run(Shape shape)
         {
             Tri octant = new Tri();// Start with (0,0,1), (0,1,0), (1,0,0) for one octant of sphere 
 
@@ -272,7 +264,7 @@ namespace TriDivide
 
             Tri_Split(octant, 0, 0, false);
 
-            ConnectTris();
+            ConnectTris(shape);
         }
         /* ********************************************************************************************************* */
         public void InsertPnt(Pnt pnt)
@@ -467,6 +459,18 @@ namespace TriDivide
             }
         }
         /* ********************************************************************************************************* */
+        public class Shape
+        {
+            public List<Pnt> PntRay;
+            public List<Line> LineRay;
+            public List<Tri> TriRay;
+            /* ********************************************************************************************************* */
+            public Shape()
+            {
+                PntRay = new List<Pnt>(); LineRay = new List<Line>(); TriRay = new List<Tri>();
+            }
+        }
+        /* ********************************************************************************************************* */
         public int MapToPntRay(int XDex, int YDex)
         {
             int Dex = (YDex * this.NumCols) + XDex;// simple inefficient rectangular grid 
@@ -486,12 +490,8 @@ namespace TriDivide
 
             int ShiftVal = (MaxDimDex - RecurDepth);
 
+            // Every triangle's children must be arranged symmetrically with those of its twin triangle, so always flip el triangulo derecho. 
             int FlipBit;
-            // Every triangle's children must be arranged symmetrically with those of its twin triangle. 
-            //FlipBit = tri.BitAddress & 1;// if I'm a 0x1 triangle, then my immediate children count right to left. 
-            // FlipBit = (tri.BitAddress >> ShiftVal) & 1;// if I'm a 0x1 triangle, then my immediate children count right to left. 
-            // FlipBit = 0;
-
             FlipBit = Flip ? 1 : 0;
 
             int LeftBit = FlipBit;
@@ -574,7 +574,7 @@ namespace TriDivide
             }
         }
         /* ********************************************************************************************************* */
-        void ConnectTris()
+        void ConnectTris(Shape shape)
         {
             Pnt tctr = new Pnt();
             Pnt nbrctr = new Pnt();
@@ -582,6 +582,7 @@ namespace TriDivide
             {
                 Tri tri = this.TriRay[tcnt];
                 tri.GetCenter(tctr);
+                tctr.Normalize();
                 // System.Console.WriteLine("tcnt:{0}", Convert.ToString(tcnt, 2).PadLeft(8, '0'));
                 for (int dcnt = 0; dcnt < NumVDims; dcnt++)
                 {
@@ -589,29 +590,25 @@ namespace TriDivide
                     // System.Console.WriteLine("nbrdex:{0}", Convert.ToString(nbrdex, 2).PadLeft(8, '0'));
                     Tri nbr = this.TriRay[nbrdex];
                     nbr.GetCenter(nbrctr);
-                    SuspendConnection(Radius, tctr, nbrctr);
+                    nbrctr.Normalize();
+                    CreateArchedConnection(Radius, tctr, nbrctr, shape);
                 }
             }
         }
         /* ********************************************************************************************************* */
-        void SuspendConnection(double Radius, Pnt pt0, Pnt pt1)
+        void CreateArchedConnection(double Radius, Pnt pt0, Pnt pt1, Shape shape)
         {
-            Line ln = new Line();
+            // pt0 and pt1 must be on the surface of the sphere defined by Radius
+            // Radius is redundant, we could get it from magnitude of pt0 or pt1 
 
-            if (false)
-            {
-                ln.Assign(pt0, pt1);
-                this.LineRay.Add(ln);
-                return;
-            }
+            Line ln;
 
             Pnt ChordVect = new Pnt();
             pt1.Difference(pt0, ChordVect);// straight line from p0 to p1
             double ChordLen = ChordVect.GetMagnitude();
             double HalfChordLen = (ChordLen / 2);
 
-            // Radius is redundant, we could get it from magnitude of pt0 or pt1 
-            // CtrToChord is ctr to ChordVect, magnitude 
+            // CtrToChord is magnitude of ctr to midway of ChordVect 
             double RadSq = Radius * Radius;
             double CtrToChord = Math.Sqrt((RadSq) - (HalfChordLen * HalfChordLen)); // pythag 
             double TangentRatio = HalfChordLen / CtrToChord;// ratio of opposite/adjacent 
@@ -632,13 +629,17 @@ namespace TriDivide
             double MoonRadius = EdgeToMoon.GetMagnitude();
             double MoonRadSq = MoonRadius * MoonRadius;
             double EndAngle = Math.Asin(HalfChordLen / MoonRadius); // opposite over hypot 
+            if (HalfChordLen > MoonRadius)
+            {// this would be an error
+                System.Console.WriteLine();
+            }
             double StartAngle = -EndAngle;
             double StartSine = Math.Sin(StartAngle);
             double StartCosine = Math.Cos(StartAngle);
             double StartHeight = StartCosine * MoonRadius;
             double EndSine = Math.Sin(EndAngle);
             double SineRange = EndSine - StartSine;
-            double NumSteps = 16.0;
+            int NumSteps = 4;
             double step = (EndAngle - StartAngle) / NumSteps;
             double XTravel = 0, XTravelFactor, XTravelFactorPositive, XTravelFactorNormed;
             Pnt Walker = new Pnt();// walker walks from pt0 to pt1 
@@ -647,67 +648,30 @@ namespace TriDivide
             OffsetNormed.CopyFrom(ChordMiddle); OffsetNormed.Multiply(-1.0); OffsetNormed.Normalize(); // direction from chord toward center 
             Pnt PrevPnt = new Pnt();
             PrevPnt.CopyFrom(pt0);
-            //for (double Angle = StartAngle; Angle <= EndAngle; Angle += step)
-            for (double Percent = 0.01; Percent < 1.0; Percent += (1.0 / NumSteps))
+            for (int LCnt = 0; LCnt <= NumSteps; LCnt++)
             {
+                double Percent = LCnt / ((double)NumSteps);
                 double Angle = StartAngle + ((EndAngle - StartAngle) * Percent);
 
                 XTravelFactor = (Math.Sin(Angle)); // negative to postive range 
+                XTravel = (XTravelFactor * MoonRadius); // negative to postive range 
                 XTravelFactorPositive = XTravelFactor - StartSine; // 0 to postive range 
                 XTravelFactorNormed = XTravelFactorPositive / SineRange;// fraction along the way, 0.0 to 1.0  
 
-                XTravel = (XTravelFactor * MoonRadius); // negative to postive range 
-
+                // slowly grow ChordVect along XTravelFactorNormed, and use its 2d X value in circle formula to get arch 
                 ChordVect.Multiply(XTravelFactorNormed, Walker);
                 Walker.Add(pt0);// walker walks from pt0 to pt1 
-
-                // but now walker must be offset by Y arch 
-                // WRONG SO FAR. must adjust yheight to start at height of first point. 
-                // also why not just use cosine? 
+                // but first walker must be offset by height of Y arch 
                 double YHeight = Math.Sqrt(MoonRadSq - (XTravel * XTravel));// circle formula
                 YHeight -= StartHeight;
                 OffsetNormed.Multiply(YHeight, OffsetScaled);
-                //OffsetNormed.Multiply(0.01, OffsetScaled);
                 Walker.Add(OffsetScaled);
-
-                //ChordVect.Multiply(Percent, Walker);
-                //Walker.Add(pt0);// walker walks from pt0 to pt1 
 
                 ln = new Line();
                 ln.Assign(PrevPnt, Walker);
-                this.LineRay.Add(ln);
+                shape.LineRay.Add(ln);
                 PrevPnt.CopyFrom(Walker);
-                // or 
-                // XTravelFactor = (sin(angle)) - sin(startangle); // wrong, also need to scale by length of real line 
-
-                // slowly grow ChordVect along XTravelFactor, and use its 2d X value in circle formula to get arch 
             }
-#if false
-/*
-hcube:
-ChordVect = delta surface points;
-ChordLen = len of ChordVect;
-HalfChordLen = (ChordLen/2)
-CtrToChord(ctr to ChordVect magnitude) = sqrt( (radius^2) - (HalfChordLen^2) ); // pythag 
-TangentRatio = (ChordLen/2)/CtrToChord;// ratio of opposite/adjacent 
-extra = TangentRatio * (HalfChordLen);// extra distance from CtrToChord to orbit 
-orbitmag = CtrToChord + extra;// full orbit distance from center 
-orbitratio = orbitmag / CtrToChord;
-orbitpoint = ChordVect * orbitratio;// center of circle/sphere whose edges are perpendicular to surface 
-
-next?  hang curves between points on sphere. could just walk along the straight line, get dist from orbit and project to radius of moon. 
-better: in 2d, walk angle around the moon and get growing X value. use that as along-the-way ratio for above formula. 
-endangle =  arcsin((HalfChordLen) / MoonRadius); // opposite over hypot 
-startangle = -endangle;
-
-for (double angle=startangle to endangle step 0.whatever){
-  // XTravel = HalfChordLen + (sin(angle) * MoonRadius); // not right, starts in the wrong place 
-  or 
-  XTravelFactor = (sin(angle)) - sin(startangle); // wrong, also need to scale by length of real line 
-  // slowly grow ChordVect along XTravelFactor, and use its 2d X value in circle formula to get arch 
-}
-
-#endif
         }
     }
 }

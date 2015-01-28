@@ -3,11 +3,13 @@
   <MonoDevelop.Ide.Workbench ActiveDocument="TriDivide\TriDivide.cs">
     <Files>
       <File FileName="TriDivide\Program.cs" Line="1" Column="1" />
-      <File FileName="TriDivide\TriDivide.cs" Line="41" Column="41" />
+      <File FileName="TriDivide\TriDivide.cs" Line="7" Column="7" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>
-    <BreakpointStore />
+    <BreakpointStore>
+      <Breakpoint file="C:\Users\John\Documents\Projects\TriDivide\TriDivide\TriDivide.cs" line="635" column="37" />
+    </BreakpointStore>
   </MonoDevelop.Ide.DebuggingService.Breakpoints>
   <MonoDevelop.Ide.DebuggingService.PinnedWatches />
 </Properties>
