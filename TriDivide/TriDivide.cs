@@ -21,10 +21,11 @@ namespace TriDivide
         double Radius = 1.0;
         // Virtual dimensions
         //const int NumVDims = 1; // Virtual dimensions
-        const int NumVDims = 2; // Virtual dimensions
+        //const int NumVDims = 2; // Virtual dimensions
         //const int NumVDims = 4; // Virtual dimensions
         //const int NumVDims = 5;
         //const int NumVDims = 8;// Virtual dimensions
+        const int NumVDims = 10;// Virtual dimensions
         int MaxDimDex = NumVDims - 1; // Virtual dimensions
         int NumTris;
         Tri[] TriRay;
@@ -277,6 +278,7 @@ namespace TriDivide
         {
             public double[] Loc = new double[3];
             public int[] Dex = new int[2];
+            public int MyNumber;
             /* ********************************************************************************************************* */
             public Pnt CloneMe()
             {
@@ -461,13 +463,19 @@ namespace TriDivide
         /* ********************************************************************************************************* */
         public class Shape
         {
-            public List<Pnt> PntRay;
+            private List<Pnt> PntRay;
             public List<Line> LineRay;
             public List<Tri> TriRay;
             /* ********************************************************************************************************* */
             public Shape()
             {
                 PntRay = new List<Pnt>(); LineRay = new List<Line>(); TriRay = new List<Tri>();
+            }
+            /* ********************************************************************************************************* */
+            public void AddPnt(Pnt pnt)
+            {
+                pnt.MyNumber = this.PntRay.Count;
+                this.PntRay.Add(pnt);
             }
         }
         /* ********************************************************************************************************* */
@@ -600,6 +608,7 @@ namespace TriDivide
         {
             // pt0 and pt1 must be on the surface of the sphere defined by Radius
             // Radius is redundant, we could get it from magnitude of pt0 or pt1 
+            int NumSteps = 16;
 
             Line ln;
 
@@ -639,8 +648,6 @@ namespace TriDivide
             double StartHeight = StartCosine * MoonRadius;
             double EndSine = Math.Sin(EndAngle);
             double SineRange = EndSine - StartSine;
-            int NumSteps = 4;
-            double step = (EndAngle - StartAngle) / NumSteps;
             double XTravel = 0, XTravelFactor, XTravelFactorPositive, XTravelFactorNormed;
             Pnt Walker = new Pnt();// walker walks from pt0 to pt1 
             Pnt OffsetNormed = new Pnt();
@@ -648,6 +655,7 @@ namespace TriDivide
             OffsetNormed.CopyFrom(ChordMiddle); OffsetNormed.Multiply(-1.0); OffsetNormed.Normalize(); // direction from chord toward center 
             Pnt PrevPnt = new Pnt();
             PrevPnt.CopyFrom(pt0);
+            shape.AddPnt(PrevPnt.CloneMe());
             for (int LCnt = 0; LCnt <= NumSteps; LCnt++)
             {
                 double Percent = LCnt / ((double)NumSteps);
@@ -670,6 +678,7 @@ namespace TriDivide
                 ln = new Line();
                 ln.Assign(PrevPnt, Walker);
                 shape.LineRay.Add(ln);
+                shape.AddPnt(Walker.CloneMe());
                 PrevPnt.CopyFrom(Walker);
             }
         }
