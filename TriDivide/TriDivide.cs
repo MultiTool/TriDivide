@@ -6,7 +6,7 @@ using System.IO;
 
 /*
 to do:
-hanging connections 
+hanging connections as continuous lines 
 export tree fractal lines with real connected points. 
 mesh up all tree fractal lines for continuous surface. 
 even distribution on sphere 
@@ -24,8 +24,9 @@ namespace TriDivide
         //const int NumVDims = 2; // Virtual dimensions
         //const int NumVDims = 4; // Virtual dimensions
         //const int NumVDims = 5;
+        const int NumVDims = 6;
         //const int NumVDims = 8;// Virtual dimensions
-        const int NumVDims = 10;// Virtual dimensions
+        //const int NumVDims = 10;// Virtual dimensions
         int MaxDimDex = NumVDims - 1; // Virtual dimensions
         int NumTris;
         Tri[] TriRay;
@@ -479,6 +480,76 @@ namespace TriDivide
             }
         }
         /* ********************************************************************************************************* */
+        void Sphere_Split()
+        {// split a sphere into hemispheres 
+            Pnt ApexLeft = new Pnt();
+            ApexLeft.Assign(+1.0, 0.0, 0.0);
+
+            Pnt ApexRight = new Pnt();
+            ApexRight.Assign(-1.0, 0.0, 0.0);
+
+            Hemisphere_Split(ApexLeft, 0, false);
+            Hemisphere_Split(ApexRight, 0, true);
+        }
+        /* ********************************************************************************************************* */
+        void Hemisphere_Split(Pnt Apex, int RecurDepth, bool Flipped)
+        {// split a hemisphere into quadrants
+            Pnt ApexBack = Apex.CloneMe(); ApexBack.Loc[1] = +1.0;
+
+            Pnt ApexFront = Apex.CloneMe(); ApexFront.Loc[1] = 1.0;
+
+            Quadrant_Split(ApexBack, RecurDepth + 1, false);
+            Quadrant_Split(ApexFront, RecurDepth + 1, true);
+        }
+        /* ********************************************************************************************************* */
+        void Quadrant_Split(Pnt Apex, int RecurDepth, bool Flipped)
+        {// split a quarter sphere into octants (triangles) 
+            Tri OctantUp, OctantDown;
+            /*
+             we should pass this a 2D set of coordinates on a square (0,0,X) (0,1,X) (1,0,X) (1,1,X), where Quadrant_Split fills in the X with 0 or 1.
+            */
+            Pnt ApexDown = Apex.CloneMe(); ApexDown.Loc[2] = +1.0;
+            Pnt ApexUp = Apex.CloneMe(); ApexUp.Loc[2] = 1.0;
+
+            // need a master plan for this 
+            {
+                OctantUp = new Tri();// Start with (0,0,1), (0,1,0), (1,0,0) for one octant of sphere 
+                OctantUp.BitAddress = 0;
+                OctantUp.Vtx[0].Assign(0, 0, ApexDown.Loc[2]);
+                OctantUp.Vtx[1].Assign(0, ApexDown.Loc[1], 0);
+                OctantUp.Vtx[2].Assign(ApexDown.Loc[0], 0, 0);
+
+                OctantUp.Vtx[0].AssignDex(0, 0);// indexes on big triangle grid 
+                OctantUp.Vtx[1].AssignDex(0, this.NumRows - 1);
+                OctantUp.Vtx[2].AssignDex(this.NumCols - 1, this.NumRows - 1);
+
+                InsertPnt(OctantUp.Vtx[0]); InsertPnt(OctantUp.Vtx[1]); InsertPnt(OctantUp.Vtx[2]);
+                Tri_Split(OctantUp, 0, RecurDepth + 1, false);
+                ClearPntRay();
+            }
+            {
+                OctantDown = new Tri();// Start with (0,0,1), (0,1,0), (1,0,0) for one octant of sphere 
+                OctantDown.BitAddress = 0;
+                OctantDown.Vtx[0].Assign(0, 0, ApexUp.Loc[2]);
+                OctantDown.Vtx[1].Assign(0, ApexUp.Loc[1], 0);
+                OctantDown.Vtx[2].Assign(ApexUp.Loc[0], 0, 0);
+
+                OctantDown.Vtx[0].AssignDex(0, 0);// indexes on big triangle grid 
+                OctantDown.Vtx[1].AssignDex(0, this.NumRows - 1);
+                OctantDown.Vtx[2].AssignDex(this.NumCols - 1, this.NumRows - 1);
+
+                InsertPnt(OctantDown.Vtx[0]); InsertPnt(OctantDown.Vtx[1]); InsertPnt(OctantDown.Vtx[2]);
+                Tri_Split(OctantDown, 0, RecurDepth + 1, true);
+                ClearPntRay();
+            }
+        }
+        /* ********************************************************************************************************* */
+        public void ClearPntRay()
+        {// ONLY FOR TRIANGLE COLLISION ARRAY
+            for (int pcnt = 0; pcnt < NumPnts; pcnt++) { PntRay[pcnt] = null; }
+            // PntRay = new Pnt[NumPnts]; // or this 
+        }
+        /* ********************************************************************************************************* */
         public int MapToPntRay(int XDex, int YDex)
         {
             int Dex = (YDex * this.NumCols) + XDex;// simple inefficient rectangular grid 
@@ -486,7 +557,7 @@ namespace TriDivide
         }
         int[] Dex = new int[2];
         /* ********************************************************************************************************* */
-        void Tri_Split(Tri tri, int SplitVtxDex, int RecurDepth, bool Flip)
+        void Tri_Split(Tri tri, int SplitVtxDex, int RecurDepth, bool Flipped)
         {
             tri.RecurDepth = RecurDepth;// maybe needed sometime? 
 
@@ -500,7 +571,7 @@ namespace TriDivide
 
             // Every triangle's children must be arranged symmetrically with those of its twin triangle, so always flip el triangulo derecho. 
             int FlipBit;
-            FlipBit = Flip ? 1 : 0;
+            FlipBit = Flipped ? 1 : 0;
 
             int LeftBit = FlipBit;
             int RightBit = (~FlipBit) & 1;// opposite of left
@@ -556,8 +627,16 @@ namespace TriDivide
             //TriRight.BitAddress <<= 1; TriRight.BitAddress |= RightBit;
             TriRight.BitAddress |= (RightBit << (MaxDimDex - RecurDepth));
 
-            Tri_Split(TriLeft, 0, RecurDepth + 1, false);// 0 is index of Result vertex for both sub-triangles 
-            Tri_Split(TriRight, 0, RecurDepth + 1, true);
+            if (Flipped)
+            {// If we are in a right hand (flipped) triangle, then recurse children right to left. This creates all leaf triangles in adjacent order. 
+                Tri_Split(TriRight, 0, RecurDepth + 1, true);
+                Tri_Split(TriLeft, 0, RecurDepth + 1, false);// 0 is index of Result vertex for both sub-triangles 
+            }
+            else
+            {
+                Tri_Split(TriLeft, 0, RecurDepth + 1, false);// 0 is index of Result vertex for both sub-triangles 
+                Tri_Split(TriRight, 0, RecurDepth + 1, true);
+            }
 
             // tri0.Delete(); tri1.Delete();
         }
