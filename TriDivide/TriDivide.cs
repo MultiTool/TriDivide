@@ -19,37 +19,44 @@ namespace TriDivide
     {
         // Recursive triangle division by 2, for hypercube
         double Radius = 1.0;
+        const int SpaceDims = 3;
+        const int TotalDims = 6;
         // Virtual dimensions
-        //const int NumVDims = 1; // Virtual dimensions
-        //const int NumVDims = 2; // Virtual dimensions
-        //const int NumVDims = 4; // Virtual dimensions
+        //const int NumVDims = 1;
+        //const int NumVDims = 2;
+        //const int NumVDims = 4;
         //const int NumVDims = 5;
-        const int NumVDims = 6;
-        //const int NumVDims = 8;// Virtual dimensions
-        //const int NumVDims = 10;// Virtual dimensions
+        //const int NumVDims = 6;
+        //const int NumVDims = 8;
+        //const int NumVDims = 10;
+        const int NumVDims = TotalDims - SpaceDims;
+
         int MaxDimDex = NumVDims - 1; // Virtual dimensions
         int NumTris;
         Tri[] TriRay;
         int NumPnts;
         Pnt[] PntRay;
-        int NumRows, NumCols;
+        int NumTriRows, NumTriCols;
         String BasePath = @".\";
         List<Line> LineRay = new List<Line>();
         List<Line> TreeRay = new List<Line>();
         /* ********************************************************************************************************* */
         public TriDivide()
         {
-            NumTris = 1 << NumVDims;// 2 to the power of number of dimensions 
+            // NumTris = 1 << NumVDims;// 2 to the power of number of dimensions 
+            NumTris = 1 << TotalDims;// 2 to the power of number of dimensions 
             TriRay = new Tri[NumTris];
 
-            int HalfNumVDims = NumVDims >> 1;
-            int SqrtOfNumTris = 1 << HalfNumVDims;// square root of NumTris
+            {// vertex collision table?
+                int HalfNumVDims = NumVDims >> 1;
+                int SqrtOfNumTris = 1 << HalfNumVDims;// square root of NumTris
 
-            /* triangle grid indexing */
-            int IsOdd = (NumVDims % 2);
-            this.NumRows = ((SqrtOfNumTris) + 1);
-            this.NumCols = (((SqrtOfNumTris) * (1 + IsOdd)) + 1);
-            NumPnts = NumRows * NumCols;// inefficent, use triangle grid instead 
+                /* triangle grid indexing */
+                int IsOdd = (NumVDims % 2);
+                this.NumTriRows = ((SqrtOfNumTris) + 1);
+                this.NumTriCols = (((SqrtOfNumTris) * (1 + IsOdd)) + 1);
+            }
+            NumPnts = NumTriRows * NumTriCols;// inefficent, use triangle grid instead 
             PntRay = new Pnt[NumPnts];
 
             Shape shape = new Shape();
@@ -257,8 +264,8 @@ namespace TriDivide
             octant.Vtx[2].Assign(1, 0, 0);
 
             octant.Vtx[0].AssignDex(0, 0);// indexes on big triangle grid 
-            octant.Vtx[1].AssignDex(0, this.NumRows - 1);
-            octant.Vtx[2].AssignDex(this.NumCols - 1, this.NumRows - 1);
+            octant.Vtx[1].AssignDex(0, this.NumTriRows - 1);
+            octant.Vtx[2].AssignDex(this.NumTriCols - 1, this.NumTriRows - 1);
 
             InsertPnt(octant.Vtx[0]);
             InsertPnt(octant.Vtx[1]);
@@ -414,10 +421,30 @@ namespace TriDivide
             }
         }
         /* ********************************************************************************************************* */
-        public class Tri
+        public class Sector
         {
             public int BitAddress = 0; // assign adecuados shift bits
             public int RecurDepth = 0;// for whatever reason
+        }
+        /* ********************************************************************************************************* */
+        public class ApexSector : Sector
+        {
+            public Pnt Apex = new Pnt();
+            /* ********************************************************************************************************* */
+            public void Assign(double d0, double d1, double d2) { this.Apex.Assign(d0, d1, d2); }
+            /* ********************************************************************************************************* */
+            public void AssignDex(int d0, int d1) { this.Apex.AssignDex(d0, d1); }
+            /* ********************************************************************************************************* */
+            public ApexSector CloneMe()
+            {
+                ApexSector child = new ApexSector();
+                child.Apex.CopyFrom(this.Apex);
+                return child;
+            }
+        }
+        /* ********************************************************************************************************* */
+        public class Tri : Sector
+        {
             public Pnt[] Vtx = new Pnt[3];
             public int[] Pdex = new int[3];
 
@@ -482,64 +509,81 @@ namespace TriDivide
         /* ********************************************************************************************************* */
         void Sphere_Split()
         {// split a sphere into hemispheres 
-            Pnt ApexLeft = new Pnt();
-            ApexLeft.Assign(+1.0, 0.0, 0.0);
+            ApexSector ApexXNeg = new ApexSector(); ApexXNeg.Assign(-1.0, 0.0, 0.0);
+            ApexSector ApexXPos = new ApexSector(); ApexXPos.Assign(+1.0, 0.0, 0.0);
 
-            Pnt ApexRight = new Pnt();
-            ApexRight.Assign(-1.0, 0.0, 0.0);
+            int RecurDepth = 0;
+            int FlipBit = 0; // FlipBit = Flipped ? 1 : 0;
 
-            Hemisphere_Split(ApexLeft, 0, false);
-            Hemisphere_Split(ApexRight, 0, true);
+            int LeftBit = FlipBit;
+            int RightBit = (~FlipBit) & 1;// opposite of left
+
+            ApexXNeg.BitAddress = 0;
+            ApexXNeg.BitAddress |= (LeftBit << (MaxDimDex - RecurDepth));
+
+            ApexXPos.BitAddress = 0;
+            ApexXPos.BitAddress |= (RightBit << (MaxDimDex - RecurDepth));
+
+            Hemisphere_Split(ApexXNeg, RecurDepth, false);
+            Hemisphere_Split(ApexXPos, RecurDepth, true);
         }
         /* ********************************************************************************************************* */
-        void Hemisphere_Split(Pnt Apex, int RecurDepth, bool Flipped)
+        void Hemisphere_Split(ApexSector Apex, int RecurDepth, bool Flipped)
         {// split a hemisphere into quadrants
-            Pnt ApexBack = Apex.CloneMe(); ApexBack.Loc[1] = +1.0;
+            int FlipBit = Flipped ? 1 : 0;
+            int LeftBit = FlipBit;
+            int RightBit = (~FlipBit) & 1;// opposite of left
 
-            Pnt ApexFront = Apex.CloneMe(); ApexFront.Loc[1] = 1.0;
+            ApexSector ApexYNeg = Apex.CloneMe(); ApexYNeg.Apex.Loc[1] = -1.0;
+            ApexSector ApexYPos = Apex.CloneMe(); ApexYPos.Apex.Loc[1] = +1.0;
 
-            Quadrant_Split(ApexBack, RecurDepth + 1, false);
-            Quadrant_Split(ApexFront, RecurDepth + 1, true);
+            ApexYNeg.BitAddress = Apex.BitAddress | (LeftBit << (MaxDimDex - RecurDepth));
+            ApexYPos.BitAddress = Apex.BitAddress | (RightBit << (MaxDimDex - RecurDepth));
+
+            Quadrant_Split(ApexYNeg, RecurDepth + 1, false);
+            Quadrant_Split(ApexYPos, RecurDepth + 1, true);
         }
         /* ********************************************************************************************************* */
-        void Quadrant_Split(Pnt Apex, int RecurDepth, bool Flipped)
+        void Quadrant_Split(ApexSector Apex, int RecurDepth, bool Flipped)
         {// split a quarter sphere into octants (triangles) 
-            Tri OctantUp, OctantDown;
-            /*
-             we should pass this a 2D set of coordinates on a square (0,0,X) (0,1,X) (1,0,X) (1,1,X), where Quadrant_Split fills in the X with 0 or 1.
-            */
-            Pnt ApexDown = Apex.CloneMe(); ApexDown.Loc[2] = +1.0;
-            Pnt ApexUp = Apex.CloneMe(); ApexUp.Loc[2] = 1.0;
+            Tri OctantZPos, OctantZNeg;
+            int FlipBit = Flipped ? 1 : 0;
+            int LeftBit = FlipBit;
+            int RightBit = (~FlipBit) & 1;// opposite of left
 
             // need a master plan for this 
             {
-                OctantUp = new Tri();// Start with (0,0,1), (0,1,0), (1,0,0) for one octant of sphere 
-                OctantUp.BitAddress = 0;
-                OctantUp.Vtx[0].Assign(0, 0, ApexDown.Loc[2]);
-                OctantUp.Vtx[1].Assign(0, ApexDown.Loc[1], 0);
-                OctantUp.Vtx[2].Assign(ApexDown.Loc[0], 0, 0);
+                OctantZNeg = new Tri();// Start with (0,0,1), (0,1,0), (1,0,0) for one octant of sphere 
+                OctantZNeg.BitAddress = 0;
+                OctantZNeg.Vtx[0].Assign(0, 0, -1.0);// Z Negative
+                OctantZNeg.Vtx[1].Assign(0, Apex.Apex.Loc[1], 0);
+                OctantZNeg.Vtx[2].Assign(Apex.Apex.Loc[0], 0, 0);
 
-                OctantUp.Vtx[0].AssignDex(0, 0);// indexes on big triangle grid 
-                OctantUp.Vtx[1].AssignDex(0, this.NumRows - 1);
-                OctantUp.Vtx[2].AssignDex(this.NumCols - 1, this.NumRows - 1);
+                OctantZNeg.Vtx[0].AssignDex(0, 0);// indexes on big triangle grid 
+                OctantZNeg.Vtx[1].AssignDex(0, this.NumTriRows - 1);
+                OctantZNeg.Vtx[2].AssignDex(this.NumTriCols - 1, this.NumTriRows - 1);
 
-                InsertPnt(OctantUp.Vtx[0]); InsertPnt(OctantUp.Vtx[1]); InsertPnt(OctantUp.Vtx[2]);
-                Tri_Split(OctantUp, 0, RecurDepth + 1, false);
+                OctantZNeg.BitAddress = Apex.BitAddress | (LeftBit << (MaxDimDex - RecurDepth));
+
+                InsertPnt(OctantZNeg.Vtx[0]); InsertPnt(OctantZNeg.Vtx[1]); InsertPnt(OctantZNeg.Vtx[2]);
+                Tri_Split(OctantZNeg, 0, RecurDepth + 1, false);
                 ClearPntRay();
             }
             {
-                OctantDown = new Tri();// Start with (0,0,1), (0,1,0), (1,0,0) for one octant of sphere 
-                OctantDown.BitAddress = 0;
-                OctantDown.Vtx[0].Assign(0, 0, ApexUp.Loc[2]);
-                OctantDown.Vtx[1].Assign(0, ApexUp.Loc[1], 0);
-                OctantDown.Vtx[2].Assign(ApexUp.Loc[0], 0, 0);
+                OctantZPos = new Tri();// Start with (0,0,1), (0,1,0), (1,0,0) for one octant of sphere 
+                OctantZPos.BitAddress = 0;
+                OctantZPos.Vtx[0].Assign(0, 0, +1.0);// Z Positive
+                OctantZPos.Vtx[1].Assign(0, Apex.Apex.Loc[1], 0);
+                OctantZPos.Vtx[2].Assign(Apex.Apex.Loc[0], 0, 0);
 
-                OctantDown.Vtx[0].AssignDex(0, 0);// indexes on big triangle grid 
-                OctantDown.Vtx[1].AssignDex(0, this.NumRows - 1);
-                OctantDown.Vtx[2].AssignDex(this.NumCols - 1, this.NumRows - 1);
+                OctantZPos.Vtx[0].AssignDex(0, 0);// indexes on big triangle grid 
+                OctantZPos.Vtx[1].AssignDex(0, this.NumTriRows - 1);
+                OctantZPos.Vtx[2].AssignDex(this.NumTriCols - 1, this.NumTriRows - 1);
 
-                InsertPnt(OctantDown.Vtx[0]); InsertPnt(OctantDown.Vtx[1]); InsertPnt(OctantDown.Vtx[2]);
-                Tri_Split(OctantDown, 0, RecurDepth + 1, true);
+                OctantZPos.BitAddress = Apex.BitAddress | (RightBit << (MaxDimDex - RecurDepth));
+
+                InsertPnt(OctantZPos.Vtx[0]); InsertPnt(OctantZPos.Vtx[1]); InsertPnt(OctantZPos.Vtx[2]);
+                Tri_Split(OctantZPos, 0, RecurDepth + 1, true);
                 ClearPntRay();
             }
         }
@@ -552,7 +596,7 @@ namespace TriDivide
         /* ********************************************************************************************************* */
         public int MapToPntRay(int XDex, int YDex)
         {
-            int Dex = (YDex * this.NumCols) + XDex;// simple inefficient rectangular grid 
+            int Dex = (YDex * this.NumTriCols) + XDex;// simple inefficient rectangular grid 
             return Dex;
         }
         int[] Dex = new int[2];
@@ -616,16 +660,14 @@ namespace TriDivide
             // Create child triangle left of bisecting line 
             Tri TriLeft = new Tri();// apex + anticlock_angle + newpt;
             TriLeft.Connect(ResultVtx, SplitVtx, LeftVert);
-            TriLeft.BitAddress = tri.BitAddress;
-            //TriLeft.BitAddress <<= 1; TriLeft.BitAddress |= LeftBit;
-            TriLeft.BitAddress |= (LeftBit << (MaxDimDex - RecurDepth));
+            //TriLeft.BitAddress = tri.BitAddress; TriLeft.BitAddress <<= 1; TriLeft.BitAddress |= LeftBit;
+            TriLeft.BitAddress = tri.BitAddress | (LeftBit << (MaxDimDex - RecurDepth));
 
             // Create child triangle right of bisecting line 
             Tri TriRight = new Tri();// apex + clock_angle + newpt;
             TriRight.Connect(ResultVtx, RightVert, SplitVtx);
-            TriRight.BitAddress = tri.BitAddress;
-            //TriRight.BitAddress <<= 1; TriRight.BitAddress |= RightBit;
-            TriRight.BitAddress |= (RightBit << (MaxDimDex - RecurDepth));
+            //TriRight.BitAddress = tri.BitAddress; TriRight.BitAddress <<= 1; TriRight.BitAddress |= RightBit;
+            TriRight.BitAddress = tri.BitAddress | (RightBit << (MaxDimDex - RecurDepth));
 
             if (Flipped)
             {// If we are in a right hand (flipped) triangle, then recurse children right to left. This creates all leaf triangles in adjacent order. 
