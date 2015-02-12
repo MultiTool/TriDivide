@@ -49,12 +49,12 @@ namespace TriDivide
 
             {// vertex collision table?
                 int HalfNumVDims = NumVDims >> 1;
-                int SqrtOfNumTris = 1 << HalfNumVDims;// square root of NumTris
+                int SqrtOfNumTrisLocal = 1 << HalfNumVDims;// square root of NumTris
 
                 /* triangle grid indexing */
                 int IsOdd = (NumVDims % 2);
-                this.NumTriRows = ((SqrtOfNumTris) + 1);
-                this.NumTriCols = (((SqrtOfNumTris) * (1 + IsOdd)) + 1);
+                this.NumTriRows = ((SqrtOfNumTrisLocal) + 1);
+                this.NumTriCols = (((SqrtOfNumTrisLocal) * (1 + IsOdd)) + 1);
             }
             NumPnts = NumTriRows * NumTriCols;// inefficent, use triangle grid instead 
             PntRay = new Pnt[NumPnts];
@@ -551,13 +551,17 @@ namespace TriDivide
             int LeftBit = FlipBit;
             int RightBit = (~FlipBit) & 1;// opposite of left
 
+            double QuadrantSign = (Apex.Apex.Loc[0] * Apex.Apex.Loc[1]);// 
+            int PdexA, PdexB;
+            if (QuadrantSign > 0) { PdexA = 1; PdexB = 2; }// set rotation order of triangle vertices
+            else { PdexA = 2; PdexB = 1; }
             // need a master plan for this 
             {
+                ClearPntRay();
                 OctantZNeg = new Tri();// Start with (0,0,1), (0,1,0), (1,0,0) for one octant of sphere 
-                OctantZNeg.BitAddress = 0;
-                OctantZNeg.Vtx[0].Assign(0, 0, -1.0);// Z Negative
-                OctantZNeg.Vtx[1].Assign(0, Apex.Apex.Loc[1], 0);
-                OctantZNeg.Vtx[2].Assign(Apex.Apex.Loc[0], 0, 0);
+                OctantZNeg.Vtx[0].Assign(0, 0, -1.0);// Z Negative extreme
+                OctantZNeg.Vtx[PdexA].Assign(0, Apex.Apex.Loc[1], 0);// Y extreme
+                OctantZNeg.Vtx[PdexB].Assign(Apex.Apex.Loc[0], 0, 0);// X extreme
 
                 OctantZNeg.Vtx[0].AssignDex(0, 0);// indexes on big triangle grid 
                 OctantZNeg.Vtx[1].AssignDex(0, this.NumTriRows - 1);
@@ -567,14 +571,13 @@ namespace TriDivide
 
                 InsertPnt(OctantZNeg.Vtx[0]); InsertPnt(OctantZNeg.Vtx[1]); InsertPnt(OctantZNeg.Vtx[2]);
                 Tri_Split(OctantZNeg, 0, RecurDepth + 1, false);
-                ClearPntRay();
             }
             {
+                ClearPntRay();
                 OctantZPos = new Tri();// Start with (0,0,1), (0,1,0), (1,0,0) for one octant of sphere 
-                OctantZPos.BitAddress = 0;
-                OctantZPos.Vtx[0].Assign(0, 0, +1.0);// Z Positive
-                OctantZPos.Vtx[1].Assign(0, Apex.Apex.Loc[1], 0);
-                OctantZPos.Vtx[2].Assign(Apex.Apex.Loc[0], 0, 0);
+                OctantZPos.Vtx[0].Assign(0, 0, +1.0);// Z Positive extreme
+                OctantZPos.Vtx[PdexB].Assign(0, Apex.Apex.Loc[1], 0);// Y extreme
+                OctantZPos.Vtx[PdexA].Assign(Apex.Apex.Loc[0], 0, 0);// X extreme
 
                 OctantZPos.Vtx[0].AssignDex(0, 0);// indexes on big triangle grid 
                 OctantZPos.Vtx[1].AssignDex(0, this.NumTriRows - 1);
@@ -584,7 +587,6 @@ namespace TriDivide
 
                 InsertPnt(OctantZPos.Vtx[0]); InsertPnt(OctantZPos.Vtx[1]); InsertPnt(OctantZPos.Vtx[2]);
                 Tri_Split(OctantZPos, 0, RecurDepth + 1, true);
-                ClearPntRay();
             }
         }
         /* ********************************************************************************************************* */
