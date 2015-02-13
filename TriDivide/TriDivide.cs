@@ -20,7 +20,9 @@ namespace TriDivide
         // Recursive triangle division by 2, for hypercube
         double Radius = 1.0;
         const int SpaceDims = 3;
-        const int TotalDims = 6;
+        //const int TotalDims = 4;
+        const int TotalDims = 8;
+        //const int TotalDims = 16;
         // Virtual dimensions
         //const int NumVDims = 1;
         //const int NumVDims = 2;
@@ -29,14 +31,13 @@ namespace TriDivide
         //const int NumVDims = 6;
         //const int NumVDims = 8;
         //const int NumVDims = 10;
-        const int NumVDims = TotalDims - SpaceDims;
+        const int NumVDims = TotalDims - SpaceDims;// Virtual dimensions
 
-        int MaxDimDex = NumVDims - 1; // Virtual dimensions
+        int MaxDimDex = TotalDims - 1;
         int NumTris;
         Tri[] TriRay;
-        int NumPnts;
-        Pnt[] PntRay;
-        int NumTriRows, NumTriCols;
+        static int NumPnts;
+        static int NumTriRows, NumTriCols;
         String BasePath = @".\";
         List<Line> LineRay = new List<Line>();
         List<Line> TreeRay = new List<Line>();
@@ -53,18 +54,20 @@ namespace TriDivide
 
                 /* triangle grid indexing */
                 int IsOdd = (NumVDims % 2);
-                this.NumTriRows = ((SqrtOfNumTrisLocal) + 1);
-                this.NumTriCols = (((SqrtOfNumTrisLocal) * (1 + IsOdd)) + 1);
+                TriDivide.NumTriRows = ((SqrtOfNumTrisLocal) + 1);
+                TriDivide.NumTriCols = (((SqrtOfNumTrisLocal) * (1 + IsOdd)) + 1);
             }
             NumPnts = NumTriRows * NumTriCols;// inefficent, use triangle grid instead 
-            PntRay = new Pnt[NumPnts];
 
             Shape shape = new Shape();
-            Run(shape);
+            if (false) { Run(shape); }
+            Sphere_Split();
+            ConnectTris(shape);
+
             DumpLines(TreeRay, @"tree.obj");
             DumpLines(shape.LineRay, @"connections.obj");
-            DumpPntRay();
-            DumpTriVerts();
+            DumpPntRay(@"pntcloud.obj");
+            DumpTriVerts(@"vertices.obj");
             // DumpLines();
 
             for (int dcnt = 0; dcnt < NumVDims; dcnt++)
@@ -73,24 +76,25 @@ namespace TriDivide
             }
         }
         /* ********************************************************************************************************* */
-        public void DumpPntRay()
+        public void DumpPntRay(String FileName)
         {
             Pnt pt;
             StringBuilder sb = new StringBuilder();
             sb.Append("o Points" + Environment.NewLine);
-            for (int pcnt = 0; pcnt < this.NumPnts; pcnt++)
+            for (int pcnt = 0; pcnt < TriDivide.NumPnts; pcnt++)
             {
-                pt = PntRay[pcnt];
-                if (pt != null)
-                {
-                    String txtln = String.Format("v {0:0.000000} {1:0.000000} {2:0.000000}", pt.Loc[0], pt.Loc[1], pt.Loc[2]);
-                    sb.Append(txtln + Environment.NewLine);
-                }
+                // Fix this later. We need to iterate through every octant and offset every point's index by its octant number.
+                //pt = PntRay[pcnt];
+                //if (pt != null)
+                //{
+                //    String txtln = String.Format("v {0:0.000000} {1:0.000000} {2:0.000000}", pt.Loc[0], pt.Loc[1], pt.Loc[2]);
+                //    sb.Append(txtln + Environment.NewLine);
+                //}
             }
             File.WriteAllText(BasePath + @"pcloud5.obj", sb.ToString());
         }
         /* ********************************************************************************************************* */
-        public void DumpTriVerts()
+        public void DumpTriVerts(String FileName)
         {
             Pnt pt;
             StringBuilder sb = new StringBuilder();
@@ -105,7 +109,7 @@ namespace TriDivide
                     sb.Append(txtln + Environment.NewLine);
                 }
             }
-            File.WriteAllText(BasePath + @"pcloud4.obj", sb.ToString());
+            File.WriteAllText(BasePath + FileName, sb.ToString());
         }
         /* ********************************************************************************************************* */
         public void DumpTris()
@@ -264,22 +268,18 @@ namespace TriDivide
             octant.Vtx[2].Assign(1, 0, 0);
 
             octant.Vtx[0].AssignDex(0, 0);// indexes on big triangle grid 
-            octant.Vtx[1].AssignDex(0, this.NumTriRows - 1);
-            octant.Vtx[2].AssignDex(this.NumTriCols - 1, this.NumTriRows - 1);
+            octant.Vtx[1].AssignDex(0, TriDivide.NumTriRows - 1);
+            octant.Vtx[2].AssignDex(TriDivide.NumTriCols - 1, TriDivide.NumTriRows - 1);
 
-            InsertPnt(octant.Vtx[0]);
-            InsertPnt(octant.Vtx[1]);
-            InsertPnt(octant.Vtx[2]);
+            octant.PntRay = new Pnt[NumPnts];
+
+            octant.InsertPnt(octant.Vtx[0]);
+            octant.InsertPnt(octant.Vtx[1]);
+            octant.InsertPnt(octant.Vtx[2]);
 
             Tri_Split(octant, 0, 0, false);
 
             ConnectTris(shape);
-        }
-        /* ********************************************************************************************************* */
-        public void InsertPnt(Pnt pnt)
-        {
-            int PDex = MapToPntRay(pnt.Dex[0], pnt.Dex[1]);
-            this.PntRay[PDex] = pnt;
         }
         /* ********************************************************************************************************* */
         public class Pnt
@@ -447,6 +447,7 @@ namespace TriDivide
         {
             public Pnt[] Vtx = new Pnt[3];
             public int[] Pdex = new int[3];
+            public Pnt[] PntRay;
 
             public Tri()
             {
@@ -480,6 +481,37 @@ namespace TriDivide
                 ptresult.Multiply(1.0 / 3.0);
             }
             /* ********************************************************************************************************* */
+            public void InsertPnt(Pnt pnt)
+            {
+                int PDex = MapToPntRay(pnt.Dex[0], pnt.Dex[1]);
+                this.PntRay[PDex] = pnt;
+            }
+            /* ********************************************************************************************************* */
+            public int MapToPntRay(int XDex, int YDex)
+            {
+                int Dex = (YDex * TriDivide.NumTriCols) + XDex;// simple inefficient rectangular grid 
+                return Dex;
+            }
+            /* ********************************************************************************************************* */
+            public void CreatePntRay()
+            {// ONLY FOR TRIANGLE COLLISION ARRAY
+                this.PntRay = new Pnt[TriDivide.NumPnts];
+                this.Vtx[0].AssignDex(0, 0);// indexes on big triangle grid 
+                this.Vtx[1].AssignDex(0, TriDivide.NumTriRows - 1);
+                this.Vtx[2].AssignDex(TriDivide.NumTriCols - 1, TriDivide.NumTriRows - 1);
+            }
+            /* ********************************************************************************************************* */
+            public void ClearPntRay()
+            {// ONLY FOR TRIANGLE COLLISION ARRAY
+                for (int pcnt = 0; pcnt < TriDivide.NumPnts; pcnt++) { PntRay[pcnt] = null; }
+                // PntRay = new Pnt[TriDivide.NumPnts]; // or this 
+            }
+            /* ********************************************************************************************************* */
+            public Tri CreateChild()
+            {
+                Tri child = new Tri(); child.PntRay = this.PntRay; return child;
+            }
+            /* ********************************************************************************************************* */
             public void Delete()
             {
                 for (int pcnt = 0; pcnt < 3; pcnt++)
@@ -508,7 +540,7 @@ namespace TriDivide
         }
         /* ********************************************************************************************************* */
         void Sphere_Split()
-        {// split a sphere into hemispheres 
+        {// Split a sphere into hemispheres.
             ApexSector ApexXNeg = new ApexSector(); ApexXNeg.Assign(-1.0, 0.0, 0.0);
             ApexSector ApexXPos = new ApexSector(); ApexXPos.Assign(+1.0, 0.0, 0.0);
 
@@ -518,21 +550,25 @@ namespace TriDivide
             int LeftBit = FlipBit;
             int RightBit = (~FlipBit) & 1;// opposite of left
 
+            LeftBit = 0; RightBit = 1;// snox
+
             ApexXNeg.BitAddress = 0;
             ApexXNeg.BitAddress |= (LeftBit << (MaxDimDex - RecurDepth));
 
             ApexXPos.BitAddress = 0;
             ApexXPos.BitAddress |= (RightBit << (MaxDimDex - RecurDepth));
 
-            Hemisphere_Split(ApexXNeg, RecurDepth, false);
-            Hemisphere_Split(ApexXPos, RecurDepth, true);
+            Hemisphere_Split(ApexXNeg, RecurDepth + 1, false);
+            Hemisphere_Split(ApexXPos, RecurDepth + 1, true);
         }
         /* ********************************************************************************************************* */
         void Hemisphere_Split(ApexSector Apex, int RecurDepth, bool Flipped)
-        {// split a hemisphere into quadrants
+        {// Split a hemisphere into quadrants.
             int FlipBit = Flipped ? 1 : 0;
             int LeftBit = FlipBit;
             int RightBit = (~FlipBit) & 1;// opposite of left
+
+            LeftBit = 0; RightBit = 1;// snox
 
             ApexSector ApexYNeg = Apex.CloneMe(); ApexYNeg.Apex.Loc[1] = -1.0;
             ApexSector ApexYPos = Apex.CloneMe(); ApexYPos.Apex.Loc[1] = +1.0;
@@ -542,14 +578,18 @@ namespace TriDivide
 
             Quadrant_Split(ApexYNeg, RecurDepth + 1, false);
             Quadrant_Split(ApexYPos, RecurDepth + 1, true);
+
+            // Quadrant_Split(ApexYNeg, RecurDepth + 1, true); Quadrant_Split(ApexYPos, RecurDepth + 1, false);
         }
         /* ********************************************************************************************************* */
         void Quadrant_Split(ApexSector Apex, int RecurDepth, bool Flipped)
-        {// split a quarter sphere into octants (triangles) 
+        {// Split a quarter sphere into octants (triangles).
             Tri OctantZPos, OctantZNeg;
             int FlipBit = Flipped ? 1 : 0;
             int LeftBit = FlipBit;
             int RightBit = (~FlipBit) & 1;// opposite of left
+
+            LeftBit = 0; RightBit = 1;// snox
 
             double QuadrantSign = (Apex.Apex.Loc[0] * Apex.Apex.Loc[1]);// 
             int PdexA, PdexB;
@@ -557,58 +597,50 @@ namespace TriDivide
             else { PdexA = 2; PdexB = 1; }
             // need a master plan for this 
             {
-                ClearPntRay();
                 OctantZNeg = new Tri();// Start with (0,0,1), (0,1,0), (1,0,0) for one octant of sphere 
+                OctantZNeg.CreatePntRay();
                 OctantZNeg.Vtx[0].Assign(0, 0, -1.0);// Z Negative extreme
                 OctantZNeg.Vtx[PdexA].Assign(0, Apex.Apex.Loc[1], 0);// Y extreme
                 OctantZNeg.Vtx[PdexB].Assign(Apex.Apex.Loc[0], 0, 0);// X extreme
 
-                OctantZNeg.Vtx[0].AssignDex(0, 0);// indexes on big triangle grid 
-                OctantZNeg.Vtx[1].AssignDex(0, this.NumTriRows - 1);
-                OctantZNeg.Vtx[2].AssignDex(this.NumTriCols - 1, this.NumTriRows - 1);
+                //OctantZNeg.Vtx[0].AssignDex(0, 0);// indexes on big triangle grid 
+                //OctantZNeg.Vtx[1].AssignDex(0, TriDivide.NumTriRows - 1);
+                //OctantZNeg.Vtx[2].AssignDex(TriDivide.NumTriCols - 1, TriDivide.NumTriRows - 1);
 
                 OctantZNeg.BitAddress = Apex.BitAddress | (LeftBit << (MaxDimDex - RecurDepth));
 
-                InsertPnt(OctantZNeg.Vtx[0]); InsertPnt(OctantZNeg.Vtx[1]); InsertPnt(OctantZNeg.Vtx[2]);
+                OctantZNeg.InsertPnt(OctantZNeg.Vtx[0]); OctantZNeg.InsertPnt(OctantZNeg.Vtx[1]); OctantZNeg.InsertPnt(OctantZNeg.Vtx[2]);
                 Tri_Split(OctantZNeg, 0, RecurDepth + 1, false);
             }
             {
-                ClearPntRay();
                 OctantZPos = new Tri();// Start with (0,0,1), (0,1,0), (1,0,0) for one octant of sphere 
+                OctantZPos.CreatePntRay();
                 OctantZPos.Vtx[0].Assign(0, 0, +1.0);// Z Positive extreme
                 OctantZPos.Vtx[PdexB].Assign(0, Apex.Apex.Loc[1], 0);// Y extreme
                 OctantZPos.Vtx[PdexA].Assign(Apex.Apex.Loc[0], 0, 0);// X extreme
 
-                OctantZPos.Vtx[0].AssignDex(0, 0);// indexes on big triangle grid 
-                OctantZPos.Vtx[1].AssignDex(0, this.NumTriRows - 1);
-                OctantZPos.Vtx[2].AssignDex(this.NumTriCols - 1, this.NumTriRows - 1);
+                //OctantZPos.Vtx[0].AssignDex(0, 0);// indexes on big triangle grid 
+                //OctantZPos.Vtx[1].AssignDex(0, TriDivide.NumTriRows - 1);
+                //OctantZPos.Vtx[2].AssignDex(TriDivide.NumTriCols - 1, TriDivide.NumTriRows - 1);
 
                 OctantZPos.BitAddress = Apex.BitAddress | (RightBit << (MaxDimDex - RecurDepth));
 
-                InsertPnt(OctantZPos.Vtx[0]); InsertPnt(OctantZPos.Vtx[1]); InsertPnt(OctantZPos.Vtx[2]);
+                OctantZPos.InsertPnt(OctantZPos.Vtx[0]); OctantZPos.InsertPnt(OctantZPos.Vtx[1]); OctantZPos.InsertPnt(OctantZPos.Vtx[2]);
                 Tri_Split(OctantZPos, 0, RecurDepth + 1, true);
             }
-        }
-        /* ********************************************************************************************************* */
-        public void ClearPntRay()
-        {// ONLY FOR TRIANGLE COLLISION ARRAY
-            for (int pcnt = 0; pcnt < NumPnts; pcnt++) { PntRay[pcnt] = null; }
-            // PntRay = new Pnt[NumPnts]; // or this 
-        }
-        /* ********************************************************************************************************* */
-        public int MapToPntRay(int XDex, int YDex)
-        {
-            int Dex = (YDex * this.NumTriCols) + XDex;// simple inefficient rectangular grid 
-            return Dex;
         }
         int[] Dex = new int[2];
         /* ********************************************************************************************************* */
         void Tri_Split(Tri tri, int SplitVtxDex, int RecurDepth, bool Flipped)
-        {
+        {// Now it's triangles all the way down.
             tri.RecurDepth = RecurDepth;// maybe needed sometime? 
 
-            if (RecurDepth >= NumVDims)
+            if (RecurDepth >= TotalDims)
             {
+                if (TriRay[tri.BitAddress] != null)
+                {
+                    System.Console.WriteLine("nop");
+                }
                 TriRay[tri.BitAddress] = tri;
                 return;
             }
@@ -636,8 +668,8 @@ namespace TriDivide
 
             {// Discover or create new point, bisecting opposite side
                 SplitIndexes(LeftVert, RightVert, Dex);
-                PDex = MapToPntRay(Dex[0], Dex[1]);
-                ResultVtx = this.PntRay[PDex];
+                PDex = tri.MapToPntRay(Dex[0], Dex[1]);
+                ResultVtx = tri.PntRay[PDex];
                 if (ResultVtx == null)
                 {
                     ResultVtx = new Pnt();// not found, create new point bisecting opposite side
@@ -647,7 +679,7 @@ namespace TriDivide
                         ResultVtx.Dex[dcnt] = Dex[dcnt];
                     }
                     ResultVtx.MapToSphere(Radius);// move pt to sphere
-                    this.PntRay[PDex] = ResultVtx;
+                    tri.PntRay[PDex] = ResultVtx;
                 }
             }
 
@@ -660,16 +692,16 @@ namespace TriDivide
             }
 
             // Create child triangle left of bisecting line 
-            Tri TriLeft = new Tri();// apex + anticlock_angle + newpt;
+            Tri TriLeft = tri.CreateChild();// new Tri();// apex + anticlock_angle + newpt; 
             TriLeft.Connect(ResultVtx, SplitVtx, LeftVert);
             //TriLeft.BitAddress = tri.BitAddress; TriLeft.BitAddress <<= 1; TriLeft.BitAddress |= LeftBit;
-            TriLeft.BitAddress = tri.BitAddress | (LeftBit << (MaxDimDex - RecurDepth));
+            TriLeft.BitAddress = tri.BitAddress | (LeftBit << (ShiftVal));
 
             // Create child triangle right of bisecting line 
-            Tri TriRight = new Tri();// apex + clock_angle + newpt;
+            Tri TriRight = tri.CreateChild();// new Tri();// apex + clock_angle + newpt;
             TriRight.Connect(ResultVtx, RightVert, SplitVtx);
             //TriRight.BitAddress = tri.BitAddress; TriRight.BitAddress <<= 1; TriRight.BitAddress |= RightBit;
-            TriRight.BitAddress = tri.BitAddress | (RightBit << (MaxDimDex - RecurDepth));
+            TriRight.BitAddress = tri.BitAddress | (RightBit << (ShiftVal));
 
             if (Flipped)
             {// If we are in a right hand (flipped) triangle, then recurse children right to left. This creates all leaf triangles in adjacent order. 
@@ -706,7 +738,7 @@ namespace TriDivide
         }
         /* ********************************************************************************************************* */
         void ConnectTris(Shape shape)
-        {
+        {// Create hypercube edges
             Pnt tctr = new Pnt();
             Pnt nbrctr = new Pnt();
             for (int tcnt = 0; tcnt < this.NumTris; tcnt++)
@@ -715,7 +747,7 @@ namespace TriDivide
                 tri.GetCenter(tctr);
                 tctr.Normalize();
                 // System.Console.WriteLine("tcnt:{0}", Convert.ToString(tcnt, 2).PadLeft(8, '0'));
-                for (int dcnt = 0; dcnt < NumVDims; dcnt++)
+                for (int dcnt = 0; dcnt < TotalDims; dcnt++)
                 {
                     int nbrdex = tcnt ^ (0x1 << dcnt);
                     // System.Console.WriteLine("nbrdex:{0}", Convert.ToString(nbrdex, 2).PadLeft(8, '0'));
