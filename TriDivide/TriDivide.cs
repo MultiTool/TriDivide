@@ -21,7 +21,10 @@ namespace TriDivide
         double Radius = 1.0;
         const int SpaceDims = 3;
         //const int TotalDims = 4;
+        //const int TotalDims = 5;
+        //const int TotalDims = 6;
         const int TotalDims = 8;
+        //const int TotalDims = 10;
         //const int TotalDims = 16;
         // Virtual dimensions
         //const int NumVDims = 1;
@@ -91,7 +94,7 @@ namespace TriDivide
                 //    sb.Append(txtln + Environment.NewLine);
                 //}
             }
-            File.WriteAllText(BasePath + @"pcloud5.obj", sb.ToString());
+            File.WriteAllText(BasePath + FileName, sb.ToString());
         }
         /* ********************************************************************************************************* */
         public void DumpTriVerts(String FileName)
@@ -610,7 +613,7 @@ namespace TriDivide
                 OctantZNeg.BitAddress = Apex.BitAddress | (LeftBit << (MaxDimDex - RecurDepth));
 
                 OctantZNeg.InsertPnt(OctantZNeg.Vtx[0]); OctantZNeg.InsertPnt(OctantZNeg.Vtx[1]); OctantZNeg.InsertPnt(OctantZNeg.Vtx[2]);
-                Tri_Split(OctantZNeg, 0, RecurDepth + 1, false);
+                Tri_Split(OctantZNeg, 0, RecurDepth + 1, (QuadrantSign < 0));
             }
             {
                 OctantZPos = new Tri();// Start with (0,0,1), (0,1,0), (1,0,0) for one octant of sphere 
@@ -626,7 +629,7 @@ namespace TriDivide
                 OctantZPos.BitAddress = Apex.BitAddress | (RightBit << (MaxDimDex - RecurDepth));
 
                 OctantZPos.InsertPnt(OctantZPos.Vtx[0]); OctantZPos.InsertPnt(OctantZPos.Vtx[1]); OctantZPos.InsertPnt(OctantZPos.Vtx[2]);
-                Tri_Split(OctantZPos, 0, RecurDepth + 1, true);
+                Tri_Split(OctantZPos, 0, RecurDepth + 1, (QuadrantSign > 0));
             }
         }
         int[] Dex = new int[2];
